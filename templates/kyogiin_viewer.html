@@ -70,7 +70,6 @@
     .other-file-area .file-icon-big { font-size: 5rem; margin-bottom: 20px; }
     .other-file-area p { font-size: 1.05rem; margin-bottom: 16px; opacity: .85; }
 
-    /* 透かし（PDF以外用） */
     .watermark-overlay {
       position: fixed; top: 52px; left: 0; right: 0; bottom: 0;
       pointer-events: none; z-index: 100; overflow: hidden;
@@ -110,13 +109,11 @@
   <div class="viewer-body">
 
     {% if file_ext == 'pdf' %}
-    <!-- PDF：PDF.jsで全ページ表示＋透かしをcanvasに直接描画 -->
     <div id="pdf-container" style="width:100%;height:100%;overflow-y:auto;background:#525659;padding:10px;box-sizing:border-box;">
       <div id="pdf-pages"></div>
     </div>
 
     {% elif file_ext in ['jpg', 'jpeg', 'png', 'gif'] %}
-    <!-- 画像：透かしoverlayで対応 -->
     <div class="image-area">
       <img src="{{ file_url }}" alt="{{ display_name }}">
     </div>
@@ -153,20 +150,17 @@
 
   </div>
 
-  <!-- 透かしoverlay（PDF以外に使用） -->
   {% if file_ext != 'pdf' %}
-  {% if watermark or file_type == "gijiroku" %}
+  {% if watermark or file_type == 'gijiroku' %}
   <div class="watermark-overlay" id="watermarkOverlay"></div>
   {% endif %}
   {% endif %}
 
-  <!-- PDF.js -->
   {% if file_ext == 'pdf' %}
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   {% endif %}
 
   <script>
-    // キーボードショートカット無効化
     {% if not allow_print %}
     document.addEventListener("keydown", function(e) {
       if (
@@ -177,7 +171,6 @@
     });
     {% endif %}
 
-    // テキストファイル読み込み
     {% if file_ext == 'txt' %}
     fetch("{{ file_url }}")
       .then(r => r.text())
@@ -185,15 +178,13 @@
       .catch(() => { document.getElementById("textContent").textContent = "読み込みに失敗しました。"; });
     {% endif %}
 
-    // 透かしテキスト生成（PDF・非PDF共通）
     const userName  = {{ user_name | tojson }};
     const now       = new Date();
     const pad       = n => String(n).padStart(2, "0");
     const waterText = `${userName}　${now.getFullYear()}/${pad(now.getMonth()+1)}/${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
 
-    // PDF以外の透かしoverlay
     {% if file_ext != 'pdf' %}
-    {% if watermark or file_type == "gijiroku" %}
+    {% if watermark or file_type == 'gijiroku' %}
     const overlay = document.getElementById("watermarkOverlay");
     const cols = Math.ceil(window.innerWidth  / 320) + 2;
     const rows = Math.ceil(window.innerHeight / 160) + 2;
@@ -210,12 +201,15 @@
     {% endif %}
     {% endif %}
 
-    // PDFをPDF.jsで表示＋透かしをcanvasに直接描画
     {% if file_ext == 'pdf' %}
     pdfjsLib.GlobalWorkerOptions.workerSrc =
       'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
-    const showWatermark = {{ 'true' if (watermark or file_type == 'gijiroku') else 'false' }};
+    {% if watermark or file_type == 'gijiroku' %}
+    const showWatermark = true;
+    {% else %}
+    const showWatermark = false;
+    {% endif %}
 
     function drawWatermark(canvas) {
       if (!showWatermark) return;
@@ -246,4 +240,20 @@
           wrapper.style.cssText = 'position:relative;margin:0 auto 10px;';
           const canvas = document.createElement('canvas');
           canvas.style.cssText = 'display:block;max-width:100%;';
-          const scale = (container.clientWidth || windo
+          const scale = (container.clientWidth || window.innerWidth) /
+                        page.getViewport({scale: 1}).width;
+          const viewport = page.getViewport({scale: scale});
+          canvas.width  = viewport.width;
+          canvas.height = viewport.height;
+          wrapper.appendChild(canvas);
+          container.appendChild(wrapper);
+          page.render({canvasContext: canvas.getContext('2d'), viewport: viewport})
+              .promise.then(() => drawWatermark(canvas));
+        });
+      }
+    });
+    {% endif %}
+
+  </script>
+</body>
+</html>
