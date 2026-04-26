@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block content %}
+
+<section class="auth-section">
+  <div class="auth-box">
+    <div class="auth-icon">🔒</div>
+    <h2>協議員専用ページ</h2>
+    <p class="auth-desc">このページは協議員専用です。<br>お名前と個人パスワードを入力してください。</p>
+
+    {% if error %}
+      <div class="alert alert-danger">{{ error }}</div>
+    {% endif %}
+
+    <form method="POST" action="{{ url_for('kyogiin') }}">
+      <div class="form-group">
+        <label for="name">お名前</label>
+        <input type="text" id="name" name="name"
+               placeholder="例：山田太郎" autofocus required>
+      </div>
+      <div class="form-group">
+        <label for="password">パスワード</label>
+        <input type="password" id="password" name="password"
+               placeholder="個人パスワードを入力" required>
+      </div>
+      <button type="submit" class="btn btn-full">ログイン</button>
+    </form>
+  </div>
+</section>
+
+{% endblock %}

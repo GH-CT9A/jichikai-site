@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block content %}
+
+<section class="kyogiin-section">
+  <div class="kyogiin-header">
+    <h2>📋 協議員資料</h2>
+    <div class="kyogiin-header-btns">
+      <a href="{{ url_for('kyogiin_change_password') }}" class="btn btn-outline btn-sm">🔑 パスワード変更</a>
+      <a href="{{ url_for('kyogiin_logout') }}" class="btn btn-outline btn-sm">ログアウト</a>
+    </div>
+  </div>
+  <p class="login-user">ログイン中：<strong>{{ user_name }}</strong> さん</p>
+
+  <!-- 月タブ -->
+  <div class="month-tabs">
+    {% for m in months %}
+    <a href="{{ url_for('kyogiin_files', month=m) }}"
+       class="month-tab {% if m == current_month %}active{% endif %}">
+      {{ m }}
+    </a>
+    {% endfor %}
+  </div>
+
+  <!-- ファイルエリア -->
+  <div class="files-area">
+    <h3>{{ current_month }}の資料・議事録</h3>
+
+    <!-- 資料 -->
+    <div class="file-section">
+      <h4 class="file-section-title">📁 資料</h4>
+      {% if shiryo %}
+        <div class="file-list">
+          {% for fname in shiryo %}
+          <div class="file-item">
+            <span class="file-icon">📄</span>
+            <span class="file-name">{{ get_display_name(fname) }}</span>
+            <a href="{{ url_for('kyogiin_view_file', file_type='shiryo', filename=fname) }}"
+               class="btn btn-view">表示</a>
+          </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="no-files">📭 資料はありません</p>
+      {% endif %}
+    </div>
+
+    <!-- 議事録 -->
+    <div class="file-section">
+      <h4 class="file-section-title">📝 議事録</h4>
+      {% if gijiroku %}
+        <div class="file-list">
+          {% for fname in gijiroku %}
+          <div class="file-item">
+            <span class="file-icon">📄</span>
+            <span class="file-name">{{ get_display_name(fname) }}</span>
+            <a href="{{ url_for('kyogiin_view_file', file_type='gijiroku', filename=fname) }}"
+               class="btn btn-view">表示</a>
+          </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="no-files">📭 議事録はありません</p>
+      {% endif %}
+    </div>
+
+  </div>
+</section>
+
+{% endblock %}

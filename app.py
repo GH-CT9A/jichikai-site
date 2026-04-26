@@ -1,10 +1,80 @@
-from flask import Flask, render_template
+from flask import (
+    Flask, render_template, request, session,
+    redirect, url_for, send_from_directory, abort
+)
+import os, json
+from werkzeug.utils import secure_filename
+from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
+app.secret_key = os.environ.get("SECRET_KEY", "change-me-in-production")
+
+# ブラウザを閉じたらセッション消去（タブ・ウィンドウを閉じると自動ログアウト）
+app.config["SESSION_PERMANENT"] = False
+
+# 協議員・管理者ページのURL префикс
+KYOGIIN_PREFIXES = ("/kyogiin",)
+ADMIN_PREFIXES   = ("/admin",)
+
+@app.before_request
+def auto_logout_on_leave():
+    """
+    協議員・管理者ページ以外にアクセスした場合、自動的にログアウトする。
+    ただし静的ファイル・pingは除外。
+    """
+    path = request.path
+
+    # 静的ファイルとpingは除外
+    if path.startswith("/static") or path == "/ping":
+        return
+
+    # 協議員セッションの確認
+    if session.get("kyogiin_logged_in"):
+        on_kyogiin_page = any(path.startswith(p) for p in KYOGIIN_PREFIXES)
+        if not on_kyogiin_page:
+            session.pop("kyogiin_logged_in", None)
+            session.pop("kyogiin_name", None)
+
+    # 管理者セッションの確認
+    if session.get("admin_rank"):
+        on_admin_page = any(path.startswith(p) for p in ADMIN_PREFIXES)
+        if not on_admin_page:
+            session.pop("admin_rank", None)
+            session.pop("admin_name", None)
+
+CONFIG_FILE     = "config.json"
+SHIRYO_FOLDER   = os.path.join("static", "uploads", "shiryo")
+GIJIROKU_FOLDER = os.path.join("static", "uploads", "gijiroku")
+os.makedirs(SHIRYO_FOLDER,   exist_ok=True)
+os.makedirs(GIJIROKU_FOLDER, exist_ok=True)
+
+ALLOWED_GIJIROKU = {"pdf"}
+
+def load_config():
+    default = {
+        "admin2_password_hash": generate_password_hash("admin2-2024"),  # ランク2固定PW
+        "admin1_users":  {},   # ランク1: 名前+PW
+        "kyogiin_users": {},
+        "file_meta":     {}
+    }
+    if os.path.exists(CONFIG_FILE):
+        with open(CONFIG_FILE) as f:
+            data = json.load(f)
+        for k, v in default.items():
+            data.setdefault(k, v)
+        return data
+    return default
+
+def save_config(cfg):
+    with open(CONFIG_FILE, "w") as f:
+        json.dump(cfg, f, ensure_ascii=False, indent=2)
+
+def allowed_gijiroku(fn):
+    return "." in fn and fn.rsplit(".", 1)[1].lower() in ALLOWED_GIJIROKU
 
 JICHIKAI = {
     "name": "立田自治会",
-    "tagline": "つながる・助け合う・住みよいまちへ",
+    "tagline": "明るく楽しい元気な立田町",
     "description": "私たち立田自治会は、地域の皆さまが安心して暮らせるまちづくりを目指しています。",
     "email": "jichikai-xxx@example.com",
     "phone": "077-585-0000",
@@ -12,26 +82,445 @@ JICHIKAI = {
     "meeting_day": "毎月第3土曜日 午後19時30分〜",
     "meeting_place": "集落センター",
     "services": [
-        {"icon": "🏘️", "title": "地域の安全・防犯",    "desc": "定期的な夜間パトロールや防犯灯の管理を行っています。"},
-        {"icon": "🌸", "title": "地域イベント",        "desc": "夏祭り・運動会・清掃活動など、年間を通じてイベントを開催しています。"},
+        {"icon": "🏘️", "title": "地域の安全・防犯",    "desc": "年末夜間パトロールや防犯灯の管理を行っています。"},
+        {"icon": "🌸", "title": "地域イベント",        "desc": "立田フェス・敬老会・清掃活動など、年間を通じてイベントを開催しています。"},
         {"icon": "🚨", "title": "防災・災害対策",      "desc": "避難訓練の実施や備蓄品の管理など、災害に備えた活動を行っています。"},
         {"icon": "♻️", "title": "ごみ・環境美化",      "desc": "ごみ収集ルールの周知と、地域の清掃活動を定期的に実施しています。"},
         {"icon": "👴", "title": "高齢者・福祉サポート", "desc": "一人暮らしの高齢者への見守り活動や、福祉情報の提供を行っています。"},
-        {"icon": "📢", "title": "情報共有・広報",      "desc": "自治会だよりの発行や回覧板を通じて、地域の最新情報をお届けします。"},
+        {"icon": "📢", "title": "情報共有・広報",      "desc": "回覧板を通じて、地域の最新情報をお届けします。"},
     ],
     "events": [
-        {"month": "4月", "name": "総会・役員選出"},
-        {"month": "6月", "name": "美化運動"},
-        {"month": "7月", "name": "BBQ大会"},
-        {"month": "11月", "name": "敬老会・美化運動"},
+        {"month": "4月",  "name": "総会"},
+        {"month": "5月",  "name": ""},
+        {"month": "6月",  "name": "美化運動"},
+        {"month": "7月",  "name": ""},
+        {"month": "8月",  "name": ""},
+        {"month": "9月",  "name": "総会"},
+        {"month": "10月", "name": "立田フェス"},
+        {"month": "11月", "name": "敬老会・美化運動・防災訓練"},
         {"month": "12月", "name": "夜間パトロール"},
-        {"month": "3月", "name": "防災訓練"},
+        {"month": "1月",  "name": ""},
+        {"month": "2月",  "name": ""},
+        {"month": "3月",  "name": ""},
     ]
 }
 
+MONTHS = [f"{i}月" for i in range(1, 13)]
+
+def get_files_by_month(folder):
+    result = {m: [] for m in MONTHS}
+    if os.path.exists(folder):
+        for fname in sorted(os.listdir(folder)):
+            prefix = fname.split("_")[0]
+            if prefix.isdigit() and 1 <= int(prefix) <= 12:
+                result[f"{int(prefix)}月"].append(fname)
+    return result
+
+def get_display_name(fname):
+    parts = fname.split("_", 1)
+    return parts[1] if len(parts) > 1 else fname
+
+def get_file_meta(cfg, fname):
+    meta = cfg.get("file_meta", {}).get(fname, {})
+    return {
+        "watermark": meta.get("watermark", True),
+        "download":  meta.get("download",  False),
+        "print":     meta.get("print",     False),
+    }
+
+def admin_rank():
+    return session.get("admin_rank", 0)  # 0=未ログイン, 1=ランク1, 2=ランク2
+
+# ─── 一般ページ ───────────────────────────────────────────────
 @app.route("/")
 def index():
     return render_template("index.html", company=JICHIKAI)
+
+# ─── 協議員 ───────────────────────────────────────────────────
+@app.route("/kyogiin", methods=["GET", "POST"])
+def kyogiin():
+    if session.get("kyogiin_logged_in"):
+        return redirect(url_for("kyogiin_files", month="1月"))
+    error = None
+    if request.method == "POST":
+        cfg      = load_config()
+        name     = request.form.get("name", "").strip()
+        password = request.form.get("password", "").strip()
+        users    = cfg.get("kyogiin_users", {})
+        if name in users and users[name].get("active", True):
+            if check_password_hash(users[name]["password_hash"], password):
+                session["kyogiin_logged_in"] = True
+                session["kyogiin_name"]      = name
+                return redirect(url_for("kyogiin_files", month="1月"))
+        error = "名前またはパスワードが違います"
+    return render_template("kyogiin_login.html", company=JICHIKAI, error=error)
+
+@app.route("/kyogiin/logout")
+def kyogiin_logout():
+    session.pop("kyogiin_logged_in", None)
+    session.pop("kyogiin_name", None)
+    return redirect(url_for("index"))
+
+@app.route("/kyogiin/files/<month>")
+def kyogiin_files(month):
+    if not session.get("kyogiin_logged_in"):
+        return redirect(url_for("kyogiin"))
+    if month not in MONTHS:
+        month = "1月"
+    return render_template(
+        "kyogiin_files.html",
+        company=JICHIKAI, months=MONTHS, current_month=month,
+        shiryo=get_files_by_month(SHIRYO_FOLDER).get(month, []),
+        gijiroku=get_files_by_month(GIJIROKU_FOLDER).get(month, []),
+        user_name=session.get("kyogiin_name", ""),
+        get_display_name=get_display_name,
+    )
+
+@app.route("/kyogiin/change_password", methods=["GET", "POST"])
+def kyogiin_change_password():
+    if not session.get("kyogiin_logged_in"):
+        return redirect(url_for("kyogiin"))
+    user_name = session.get("kyogiin_name", "")
+    msg = None
+    if request.method == "POST":
+        cfg     = load_config()
+        cur_pw  = request.form.get("current_password", "").strip()
+        new_pw  = request.form.get("new_password", "").strip()
+        conf_pw = request.form.get("confirm_password", "").strip()
+        if not check_password_hash(cfg["kyogiin_users"][user_name]["password_hash"], cur_pw):
+            msg = ("danger", "現在のパスワードが違います")
+        elif len(new_pw) < 4:
+            msg = ("danger", "新しいパスワードは4文字以上で入力してください")
+        elif new_pw != conf_pw:
+            msg = ("danger", "確認用パスワードが一致しません")
+        else:
+            cfg["kyogiin_users"][user_name]["password_hash"] = generate_password_hash(new_pw)
+            save_config(cfg)
+            msg = ("success", "パスワードを変更しました")
+    return render_template(
+        "kyogiin_change_password.html",
+        company=JICHIKAI, user_name=user_name, msg=msg,
+    )
+
+@app.route("/kyogiin/view/<file_type>/<filename>")
+def kyogiin_view_file(file_type, filename):
+    if not session.get("kyogiin_logged_in"):
+        return redirect(url_for("kyogiin"))
+    folder = SHIRYO_FOLDER if file_type == "shiryo" else GIJIROKU_FOLDER if file_type == "gijiroku" else None
+    if not folder:
+        abort(404)
+    safe = secure_filename(filename)
+    if not os.path.exists(os.path.join(folder, safe)):
+        abort(404)
+    cfg  = load_config()
+    meta = get_file_meta(cfg, safe) if file_type == "shiryo" else {
+        "watermark": True, "download": False, "print": False
+    }
+    ext = safe.rsplit(".", 1)[-1].lower() if "." in safe else ""
+    # Googleビューワー用の絶対URL
+    file_url     = url_for("kyogiin_raw_file", file_type=file_type, filename=safe)
+    file_url_abs = request.host_url.rstrip("/") + file_url
+    return render_template(
+        "kyogiin_viewer.html",
+        company=JICHIKAI, filename=safe,
+        display_name=get_display_name(safe),
+        user_name=session.get("kyogiin_name", ""),
+        file_url=file_url,
+        file_url_abs=file_url_abs,
+        file_ext=ext,
+        watermark=meta["watermark"],
+        allow_download=meta["download"],
+        allow_print=meta["print"],
+        is_pdf=(ext == "pdf"),
+        file_type=file_type,
+    )
+
+@app.route("/kyogiin/raw/<file_type>/<filename>")
+def kyogiin_raw_file(file_type, filename):
+    if not session.get("kyogiin_logged_in"):
+        abort(403)
+    folder = SHIRYO_FOLDER if file_type == "shiryo" else GIJIROKU_FOLDER
+    safe   = secure_filename(filename)
+    if file_type == "shiryo":
+        cfg  = load_config()
+        meta = get_file_meta(cfg, safe)
+        if request.args.get("dl") == "1" and not meta["download"]:
+            abort(403)
+        return send_from_directory(folder, safe,
+               as_attachment=(request.args.get("dl") == "1" and meta["download"]))
+    return send_from_directory(folder, safe)
+
+# ─── 管理者ランク1ログイン（フッターボタンから） ─────────────────
+@app.route("/admin/rank1", methods=["GET", "POST"])
+def admin1_login():
+    if admin_rank() >= 1:
+        return redirect(url_for("admin_dashboard"))
+    error = None
+    if request.method == "POST":
+        cfg      = load_config()
+        name     = request.form.get("name", "").strip()
+        password = request.form.get("password", "").strip()
+        a1 = cfg.get("admin1_users", {})
+        if name in a1 and a1[name].get("active", True):
+            if check_password_hash(a1[name]["password_hash"], password):
+                session["admin_rank"] = 1
+                session["admin_name"] = name
+                return redirect(url_for("admin_dashboard"))
+        error = "名前またはパスワードが違います"
+    return render_template("admin1_login.html", company=JICHIKAI, error=error)
+
+# ─── ランク1パスワード変更ページ ─────────────────────────────
+@app.route("/admin/change_password", methods=["GET", "POST"])
+def admin1_change_password():
+    if admin_rank() < 1:
+        return redirect(url_for("admin1_login"))
+    # ランク2はこのページ不要（自分専用のPW変更はダッシュボードにあり）
+    if admin_rank() == 2:
+        return redirect(url_for("admin_dashboard"))
+
+    admin_name = session.get("admin_name", "")
+    msg = None
+    if request.method == "POST":
+        cfg     = load_config()
+        cur_pw  = request.form.get("current_password", "").strip()
+        new_pw  = request.form.get("new_password", "").strip()
+        conf_pw = request.form.get("confirm_password", "").strip()
+        a1 = cfg.get("admin1_users", {})
+        if admin_name not in a1:
+            msg = ("danger", "ユーザーが見つかりません")
+        elif not check_password_hash(a1[admin_name]["password_hash"], cur_pw):
+            msg = ("danger", "現在のパスワードが違います")
+        elif len(new_pw) < 4:
+            msg = ("danger", "新しいパスワードは4文字以上で入力してください")
+        elif new_pw != conf_pw:
+            msg = ("danger", "確認用パスワードが一致しません")
+        else:
+            cfg["admin1_users"][admin_name]["password_hash"] = generate_password_hash(new_pw)
+            save_config(cfg)
+            msg = ("success", "パスワードを変更しました")
+    return render_template(
+        "admin1_change_password.html",
+        company=JICHIKAI,
+        admin_name=admin_name,
+        msg=msg,
+    )
+
+# ─── 管理者ランク2ログイン（/adminから・パスワードのみ） ────────────
+@app.route("/admin", methods=["GET", "POST"])
+def admin_login():
+    if admin_rank() >= 1:
+        return redirect(url_for("admin_dashboard"))
+    error = None
+    if request.method == "POST":
+        cfg      = load_config()
+        password = request.form.get("password", "").strip()
+        if check_password_hash(cfg["admin2_password_hash"], password):
+            session["admin_rank"] = 2
+            session["admin_name"] = "上位管理者"
+            return redirect(url_for("admin_dashboard"))
+        error = "パスワードが違います"
+    return render_template("admin_login.html", company=JICHIKAI, error=error)
+
+@app.route("/admin/logout")
+def admin_logout():
+    session.pop("admin_rank", None)
+    session.pop("admin_name", None)
+    return redirect(url_for("index"))
+
+# ─── 管理ダッシュボード ───────────────────────────────────────
+@app.route("/admin/dashboard", methods=["GET", "POST"])
+def admin_dashboard():
+    if admin_rank() < 1:
+        return redirect(url_for("admin_login"))
+    cfg = load_config()
+    msg = None
+
+    if request.method == "POST":
+        action = request.form.get("action")
+
+        # ════ ランク1・2共通 ════
+        if action == "upload_shiryo":
+            month       = request.form.get("month", "1月")
+            file        = request.files.get("file")
+            watermark   = request.form.get("watermark") == "1"
+            download    = request.form.get("download")  == "1"
+            allow_print = request.form.get("print")     == "1"
+            if not file or file.filename == "":
+                msg = ("danger", "ファイルを選択してください")
+            else:
+                month_num = MONTHS.index(month) + 1
+                original  = secure_filename(file.filename)
+                save_name = f"{month_num:02d}_{original}"
+                file.save(os.path.join(SHIRYO_FOLDER, save_name))
+                cfg.setdefault("file_meta", {})[save_name] = {
+                    "watermark": watermark, "download": download, "print": allow_print,
+                }
+                save_config(cfg)
+                msg = ("success", f"{month}に資料「{original}」をアップロードしました")
+
+        elif action == "upload_gijiroku":
+            month = request.form.get("month", "1月")
+            file  = request.files.get("file")
+            if not file or file.filename == "":
+                msg = ("danger", "ファイルを選択してください")
+            elif not allowed_gijiroku(file.filename):
+                msg = ("danger", "議事録はPDFファイルのみアップロードできます")
+            else:
+                month_num = MONTHS.index(month) + 1
+                original  = secure_filename(file.filename)
+                save_name = f"{month_num:02d}_{original}"
+                file.save(os.path.join(GIJIROKU_FOLDER, save_name))
+                msg = ("success", f"{month}に議事録「{original}」をアップロードしました")
+
+        elif action == "delete_shiryo":
+            fname = secure_filename(request.form.get("filename", ""))
+            fpath = os.path.join(SHIRYO_FOLDER, fname)
+            if os.path.exists(fpath):
+                os.remove(fpath)
+                cfg.get("file_meta", {}).pop(fname, None)
+                save_config(cfg)
+                msg = ("success", f"資料「{get_display_name(fname)}」を削除しました")
+
+        elif action == "delete_gijiroku":
+            fname = secure_filename(request.form.get("filename", ""))
+            fpath = os.path.join(GIJIROKU_FOLDER, fname)
+            if os.path.exists(fpath):
+                os.remove(fpath)
+                msg = ("success", f"議事録「{get_display_name(fname)}」を削除しました")
+
+        # ════ ランク1：自分のパスワード変更 ════
+        elif action == "change_admin1_pw":
+            name    = session.get("admin_name", "")
+            cur_pw  = request.form.get("current_password", "").strip()
+            new_pw  = request.form.get("new_password", "").strip()
+            conf_pw = request.form.get("confirm_password", "").strip()
+            a1 = cfg.get("admin1_users", {})
+            if name not in a1:
+                msg = ("danger", "ユーザーが見つかりません")
+            elif not check_password_hash(a1[name]["password_hash"], cur_pw):
+                msg = ("danger", "現在のパスワードが違います")
+            elif len(new_pw) < 4:
+                msg = ("danger", "新しいパスワードは4文字以上で入力してください")
+            elif new_pw != conf_pw:
+                msg = ("danger", "確認用パスワードが一致しません")
+            else:
+                cfg["admin1_users"][name]["password_hash"] = generate_password_hash(new_pw)
+                save_config(cfg)
+                msg = ("success", "パスワードを変更しました")
+
+        # ════ ランク2専用 ════
+        elif admin_rank() < 2:
+            msg = ("danger", "この操作はランク2管理者のみ実行できます")
+
+        elif action == "add_kyogiin":
+            name    = request.form.get("new_name", "").strip()
+            pw      = request.form.get("new_password", "").strip()
+            conf_pw = request.form.get("confirm_password", "").strip()
+            if not name:
+                msg = ("danger", "名前を入力してください")
+            elif name in cfg["kyogiin_users"]:
+                msg = ("danger", f"「{name}」はすでに登録されています")
+            elif pw != conf_pw:
+                msg = ("danger", "確認用パスワードが一致しません")
+            else:
+                cfg["kyogiin_users"][name] = {
+                    "password_hash": generate_password_hash(pw), "active": True
+                }
+                save_config(cfg)
+                msg = ("success", f"協議員「{name}」を追加しました")
+
+        elif action == "change_kyogiin_pw":
+            name    = request.form.get("user_name", "").strip()
+            pw      = request.form.get("new_password", "").strip()
+            conf_pw = request.form.get("confirm_password", "").strip()
+            if name not in cfg["kyogiin_users"]:
+                msg = ("danger", "ユーザーが見つかりません")
+            elif pw != conf_pw:
+                msg = ("danger", "確認用パスワードが一致しません")
+            else:
+                cfg["kyogiin_users"][name]["password_hash"] = generate_password_hash(pw)
+                save_config(cfg)
+                msg = ("success", f"「{name}」のパスワードを変更しました")
+
+        elif action == "toggle_kyogiin":
+            name = request.form.get("user_name", "").strip()
+            if name in cfg["kyogiin_users"]:
+                cur = cfg["kyogiin_users"][name].get("active", True)
+                cfg["kyogiin_users"][name]["active"] = not cur
+                save_config(cfg)
+                msg = ("success", f"「{name}」を{'有効' if not cur else '無効'}にしました")
+
+        elif action == "delete_kyogiin":
+            name = request.form.get("user_name", "").strip()
+            if name in cfg["kyogiin_users"]:
+                del cfg["kyogiin_users"][name]
+                save_config(cfg)
+                msg = ("success", f"協議員「{name}」を削除しました")
+
+        elif action == "add_admin1":
+            name    = request.form.get("new_name", "").strip()
+            pw      = request.form.get("new_password", "").strip()
+            conf_pw = request.form.get("confirm_password", "").strip()
+            if not name:
+                msg = ("danger", "名前を入力してください")
+            elif name in cfg.get("admin1_users", {}):
+                msg = ("danger", f"「{name}」はすでに登録されています")
+            elif pw != conf_pw:
+                msg = ("danger", "確認用パスワードが一致しません")
+            else:
+                cfg.setdefault("admin1_users", {})[name] = {
+                    "password_hash": generate_password_hash(pw), "active": True
+                }
+                save_config(cfg)
+                msg = ("success", f"ランク1管理者「{name}」を追加しました")
+
+        elif action == "toggle_admin1":
+            name = request.form.get("user_name", "").strip()
+            if name in cfg.get("admin1_users", {}):
+                cur = cfg["admin1_users"][name].get("active", True)
+                cfg["admin1_users"][name]["active"] = not cur
+                save_config(cfg)
+                msg = ("success", f"「{name}」を{'有効' if not cur else '無効'}にしました")
+
+        elif action == "delete_admin1":
+            name = request.form.get("user_name", "").strip()
+            if name in cfg.get("admin1_users", {}):
+                del cfg["admin1_users"][name]
+                save_config(cfg)
+                msg = ("success", f"ランク1管理者「{name}」を削除しました")
+
+        elif action == "change_admin2_pw":
+            cur_pw  = request.form.get("current_password", "").strip()
+            new_pw  = request.form.get("new_password", "").strip()
+            conf_pw = request.form.get("confirm_password", "").strip()
+            if not check_password_hash(cfg["admin2_password_hash"], cur_pw):
+                msg = ("danger", "現在のパスワードが違います")
+            elif new_pw != conf_pw:
+                msg = ("danger", "確認用パスワードが一致しません")
+            else:
+                cfg["admin2_password_hash"] = generate_password_hash(new_pw)
+                save_config(cfg)
+                msg = ("success", "ランク2パスワードを変更しました")
+
+        cfg = load_config()
+
+    return render_template(
+        "admin_dashboard.html",
+        company=JICHIKAI, months=MONTHS,
+        shiryo_by_month=get_files_by_month(SHIRYO_FOLDER),
+        gijiroku_by_month=get_files_by_month(GIJIROKU_FOLDER),
+        kyogiin_users=cfg.get("kyogiin_users", {}),
+        admin1_users=cfg.get("admin1_users", {}),
+        file_meta=cfg.get("file_meta", {}),
+        admin_rank=admin_rank(),
+        admin_name=session.get("admin_name", ""),
+        msg=msg,
+        get_display_name=get_display_name,
+    )
+
+@app.route("/ping")
+def ping():
+    return "pong", 200
 
 if __name__ == "__main__":
     app.run(debug=True, host="0.0.0.0", port=5000)

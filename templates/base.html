@@ -11,27 +11,43 @@
     <nav>
       <div class="logo">{{ company.name }}</div>
       <ul>
-        <li><a href="#about">自治会概要</a></li>
-        <li><a href="#services">活動内容</a></li>
-        <li><a href="#events">年間行事</a></li>
-        <li><a href="#contact">お問い合わせ</a></li>
+        <li><a href="/#about">自治会概要</a></li>
+        <li><a href="/#services">活動内容</a></li>
+        <li><a href="/#events">年間行事</a></li>
+        <li><a href="/#contact">お問い合わせ</a></li>
       </ul>
     </nav>
   </header>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+        <div class="flash flash-{{ category }}">{{ message }}</div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
 
   {% block content %}{% endblock %}
 
   <footer>
     <p>&copy; 2026 {{ company.name }}. All Rights Reserved.</p>
+    <div class="footer-links">
+      <a href="{{ url_for('kyogiin') }}" class="footer-link">🔒 協議員専用ページ</a>
+      <span class="footer-sep">｜</span>
+      <a href="{{ url_for('admin1_login') }}" class="footer-link">⚙️ 管理者ページ</a>
+    </div>
   </footer>
+
   <script>
     let current = 0;
     const slides = document.querySelectorAll('.slide');
-    setInterval(() => {
+    if (slides.length > 0) {
+      setInterval(() => {
         slides[current].classList.remove('active');
         current = (current + 1) % slides.length;
         slides[current].classList.add('active');
-    }, 3000);
+      }, 3000);
+    }
   </script>
 </body>
 </html>

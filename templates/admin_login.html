@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block content %}
+
+<section class="auth-section">
+  <div class="auth-box">
+    <div class="auth-icon">🔐</div>
+    <h2>上位管理者ログイン</h2>
+    <p class="auth-desc">ランク2専用ページです。<br>管理者パスワードを入力してください。</p>
+
+    {% if error %}
+      <div class="alert alert-danger">{{ error }}</div>
+    {% endif %}
+
+    <form method="POST" action="{{ url_for('admin_login') }}">
+      <div class="form-group">
+        <label for="password">管理者パスワード</label>
+        <input type="password" id="password" name="password"
+               placeholder="パスワードを入力" autofocus required>
+      </div>
+      <button type="submit" class="btn btn-full">ログイン</button>
+    </form>
+  </div>
+</section>
+
+{% endblock %}

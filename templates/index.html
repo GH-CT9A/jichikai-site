@@ -47,10 +47,12 @@
   <h2>年間行事カレンダー</h2>
   <div class="timeline">
     {% for e in company.events %}
+    {% if e.name %}
     <div class="timeline-item">
       <div class="timeline-month">{{ e.month }}</div>
       <div class="timeline-name">{{ e.name }}</div>
     </div>
+    {% endif %}
     {% endfor %}
   </div>
 </section>
