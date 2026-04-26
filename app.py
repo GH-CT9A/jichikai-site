@@ -371,7 +371,8 @@ def admin_dashboard():
                 msg = ("danger", "議事録はPDFファイルのみアップロードできます")
             else:
                 month_num = MONTHS.index(month) + 1
-                original  = secure_filename(file.filename)
+                ext       = secure_filename(file.filename).rsplit(".", 1)[-1].lower()
+                original  = file.filename
                 save_name = f"{month_num:02d}_{original}"
                 file.save(os.path.join(GIJIROKU_FOLDER, save_name))
                 msg = ("success", f"{month}に議事録「{original}」をアップロードしました")
