@@ -1,38 +1,6 @@
 {
-  "admin_password_hash": "scrypt:32768:8:1$P2GWFTD9B1JSGdmw$c0fca48e89b3dda7fb4e469babb5bb186eb453991b89a8a6a31664a329eac80940609586a219ec84bf7ec66a8c3e9bb80f71652e447d7202af12048d5e06f750",
-  "kyogiin_users": {
-    "�R�c���Y": {
-      "password_hash": "scrypt:32768:8:1$3Eslopb0WowmESJv$110c1fe3486635c0d1764957b904d0baa6f25100b504ccccc636e478625cd212573b9ff1a52d44ef06d86e3c8ca644d3153e2b1d7eab9e9f5c6fb2f83b9f541a",
-      "active": true
-    }
-  },
-  "file_meta": {
-    "01_20247.docx": {
-      "watermark": true,
-      "download": false,
-      "print": true
-    },
-    "01_xlsx": {
-      "watermark": true,
-      "download": true,
-      "print": false
-    },
-    "01_134125939250190865.jpg": {
-      "watermark": true,
-      "download": false,
-      "print": false
-    },
-    "01_SOC_2_3.20.png": {
-      "watermark": true,
-      "download": true,
-      "print": true
-    }
-  },
-  "admin2_password_hash": "scrypt:32768:8:1$DIO6S8enEX12j3o1$040e027ff56b2dd66e849bd17a3b535b212b02139862abb7e374f30922db8977cb8439b53c5c57b28abc9795e807da7ac3c429ae2fb96dfd7ffe4c920a4542ad",
-  "admin1_users": {
-    "�R�c�Ԏq": {
-      "password_hash": "scrypt:32768:8:1$EUxtdDLml1rovR43$204b9e0a85ca36b24a3dc7d7a09a33dd85c6205b21366358d21edf1eef5b81e7242744712f47074a5a1e59b28ebadbb62d68ffafee805983d9d3c278cc373544",
-      "active": true
-    }
-  }
+  "admin2_password_hash": "scrypt:32768:8:1$P2GWFTD9B1JSGdmw$c0fca48e89b3dda7fb4e469babb5bb186eb453991b89a8a6a31664a329eac80940609586a219ec84bf7ec66a8c3e9bb80f71652e447d7202af12048d5e06f750",
+  "admin1_users": {},
+  "kyogiin_users": {},
+  "file_meta": {}
 }
