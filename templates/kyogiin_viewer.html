@@ -109,8 +109,14 @@
   <div class="viewer-body">
 
     {% if file_ext == 'pdf' %}
-    <iframe src="{{ file_url }}#toolbar=0&navpanes=0&scrollbar=1&view=FitH"
-            type="application/pdf"></iframe>
+    <div id="pdf-container" style="width:100%;height:100%;overflow-y:auto;background:#525659;">
+      <canvas id="pdf-canvas" style="display:block;margin:0 auto;"></canvas>
+      <div style="text-align:center;padding:10px;background:#333;position:sticky;bottom:0;">
+        <button onclick="changePage(-1)" style="color:#fff;background:#555;border:none;padding:8px 16px;border-radius:4px;font-size:1rem;cursor:pointer;">◀ 前へ</button>
+        <span id="page-info" style="color:#fff;margin:0 16px;font-size:.95rem;"></span>
+        <button onclick="changePage(1)" style="color:#fff;background:#555;border:none;padding:8px 16px;border-radius:4px;font-size:1rem;cursor:pointer;">次へ ▶</button>
+      </div>
+    </div>
 
     {% elif file_ext in ['jpg', 'jpeg', 'png', 'gif'] %}
     <div class="image-area">
@@ -194,6 +200,49 @@
       }
     }
     {% endif %}
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+    {% if file_ext == 'pdf' %}
+    pdfjsLib.GlobalWorkerOptions.workerSrc =
+      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+    let pdfDoc = null;
+    let currentPage = 1;
+
+    pdfjsLib.getDocument("{{ file_url }}").promise.then(function(doc) {
+      pdfDoc = doc;
+      updatePageInfo();
+      renderPage(currentPage);
+    });
+
+    function renderPage(num) {
+      pdfDoc.getPage(num).then(function(page) {
+        const canvas  = document.getElementById('pdf-canvas');
+        const ctx     = canvas.getContext('2d');
+        const container = document.getElementById('pdf-container');
+        const scale   = container.clientWidth / page.getViewport({scale:1}).width;
+        const viewport = page.getViewport({scale: scale});
+        canvas.width  = viewport.width;
+        canvas.height = viewport.height;
+        page.render({canvasContext: ctx, viewport: viewport});
+      });
+    }
+
+    function changePage(delta) {
+      const newPage = currentPage + delta;
+      if (newPage < 1 || newPage > pdfDoc.numPages) return;
+      currentPage = newPage;
+      updatePageInfo();
+      renderPage(currentPage);
+      document.getElementById('pdf-container').scrollTo(0, 0);
+    }
+
+    function updatePageInfo() {
+      document.getElementById('page-info').textContent =
+        `${currentPage} / ${pdfDoc.numPages} ページ`;
+    }
+    {% endif %}
+    </script>
   </script>
 </body>
 </html>
