@@ -203,14 +203,14 @@ def kyogiin_change_password():
         company=JICHIKAI, user_name=user_name, msg=msg,
     )
 
-@app.route("/kyogiin/view/<file_type>/<filename>")
+@app.route("/kyogiin/view/<file_type>/<path:filename>")
 def kyogiin_view_file(file_type, filename):
     if not session.get("kyogiin_logged_in"):
         return redirect(url_for("kyogiin"))
     folder = SHIRYO_FOLDER if file_type == "shiryo" else GIJIROKU_FOLDER if file_type == "gijiroku" else None
     if not folder:
         abort(404)
-    safe = secure_filename(filename)
+    safe = os.path.basename(filename)
     if not os.path.exists(os.path.join(folder, safe)):
         abort(404)
     cfg  = load_config()
@@ -236,12 +236,12 @@ def kyogiin_view_file(file_type, filename):
         file_type=file_type,
     )
 
-@app.route("/kyogiin/raw/<file_type>/<filename>")
+@app.route("/kyogiin/raw/<file_type>/<path:filename>")
 def kyogiin_raw_file(file_type, filename):
     if not session.get("kyogiin_logged_in"):
         abort(403)
     folder = SHIRYO_FOLDER if file_type == "shiryo" else GIJIROKU_FOLDER
-    safe   = secure_filename(filename)
+    safe   = os.path.basename(filename)
     if file_type == "shiryo":
         cfg  = load_config()
         meta = get_file_meta(cfg, safe)
