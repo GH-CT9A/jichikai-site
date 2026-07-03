@@ -26,7 +26,7 @@ ADMIN_PREFIXES   = ("/admin",)
 @app.before_request
 def auto_logout_on_leave():
     path = request.path
-    path = request.path
+    print(f"DEBUG path={path}, kyogiin={session.get('kyogiin_logged_in')}")
     if path.startswith("/static") or path == "/ping":
         return
     if session.get("kyogiin_logged_in"):
