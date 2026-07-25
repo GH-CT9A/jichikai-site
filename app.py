@@ -61,7 +61,7 @@ def cloud_json_load(name, default):
 
 def cloud_json_save(name, data):
     """dictをJSON化してCloudinaryにraw保存(上書き)する。"""
-    public_id = f"{JSON_CONFIG_FOLDER}/{name}"
+    public_id = f"{JSON_CONFIG_FOLDER}/{name}.json"
     payload = json.dumps(data, ensure_ascii=False, indent=2).encode("utf-8")
     cloudinary.uploader.upload(
         io.BytesIO(payload),
