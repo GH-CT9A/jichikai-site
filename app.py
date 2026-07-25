@@ -202,9 +202,19 @@ def get_file_meta(cfg, fname):
 def admin_rank():
     return session.get("admin_rank", 0)
 
+def default_hero_photos():
+    return {
+        "images": [
+            {"url": url_for("static", filename="images/hero_photo1.png"), "alt": "お知らせ画像1"},
+            {"url": url_for("static", filename="images/hero_photo2.png"), "alt": "お知らせ画像2"},
+            {"url": url_for("static", filename="images/hero_photo3.png"), "alt": "お知らせ画像3"},
+        ]
+    }
+
 @app.route("/")
 def index():
-    return render_template("index.html", company=JICHIKAI)
+    hero_photos = cloud_json_load("hero_photos", default_hero_photos())
+    return render_template("index.html", company=JICHIKAI, hero_photos=hero_photos)
 
 @app.route("/kyogiin", methods=["GET", "POST"])
 def kyogiin():

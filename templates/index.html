@@ -3,15 +3,11 @@
 
 <section id="hero">
   <div class="slideshow">
-    <div class="slide active">
-      <img src="{{ url_for('static', filename='images/集落センター.png') }}" alt="集落センター">
+    {% for photo in hero_photos.images %}
+    <div class="slide{% if loop.first %} active{% endif %}">
+      <img src="{{ photo.url }}" alt="{{ photo.alt }}">
     </div>
-    <div class="slide">
-      <img src="{{ url_for('static', filename='images/祭り.png') }}" alt="祭り">
-    </div>
-    <div class="slide">
-      <img src="{{ url_for('static', filename='images/美化運動.png') }}" alt="美化運動">
-    </div>
+    {% endfor %}
   </div>
   <h1>{{ company.tagline }}</h1>
   <p>{{ company.description }}</p>
