@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block content %}
+
+<section id="activity-detail" style="max-width: 1000px; margin: 0 auto; padding: 40px 20px; text-align: center;">
+  <a href="/#services" class="btn" style="display: inline-block; margin-bottom: 30px;">← 活動内容に戻る</a>
+  <h1 style="margin-bottom: 20px;">{{ content.title }}</h1>
+
+  {% if content.body %}
+    <p style="text-align: left; white-space: pre-wrap; margin-bottom: 30px;">{{ content.body }}</p>
+  {% endif %}
+
+  {% if content.images %}
+    {% for img_url in content.images %}
+      <img src="{{ img_url }}" alt="{{ content.title }}" style="width: 100%; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); margin-bottom: 20px;">
+    {% endfor %}
+  {% else %}
+    <p style="color: #888;">現在、画像は準備中です。</p>
+  {% endif %}
+</section>
+
+{% endblock %}

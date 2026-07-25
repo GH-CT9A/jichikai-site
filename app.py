@@ -118,12 +118,12 @@ JICHIKAI = {
     "meeting_day": "毎月第3土曜日 午後19時30分〜",
     "meeting_place": "集落センター",
     "services": [
-        {"icon": "🏘️", "title": "地域の安全・防防", "desc": "年末夜間パトロールや防犯灯の管理を行っています。"},
-        {"icon": "🌸", "title": "地域イベント", "desc": "立田フェス・敬老会・清掃活動など、年間を通じてイベントを開催しています。"},
-        {"icon": "🚨", "title": "防災・災害対策", "desc": "避難訓練の実施や備蓄品の管理など、災害に備えた活動を行っています。"},
-        {"icon": "♻️", "title": "ごみ・環境美化", "desc": "ごみ収集ルールの周知と、地域の清掃活動を定期的に実施しています。"},
-        {"icon": "👴", "title": "高齢者・福祉サポート", "desc": "一人暮らしの高齢者への見守り活動や、福祉情報の提供を行っています。"},
-        {"icon": "📢", "title": "情報共有・広報", "desc": "回覧板を通じて、地域の最新情報をお届けします。"},
+        {"icon": "🏘️", "title": "地域の安全・防防", "desc": "年末夜間パトロールや防犯灯の管理を行っています。", "tag_id": "bohan"},
+        {"icon": "🌸", "title": "地域イベント", "desc": "立田フェス・敬老会・清掃活動など、年間を通じてイベントを開催しています。", "tag_id": "event"},
+        {"icon": "🚨", "title": "防災・災害対策", "desc": "避難訓練の実施や備蓄品の管理など、災害に備えた活動を行っています。", "tag_id": "saigai"},
+        {"icon": "♻️", "title": "ごみ・環境美化", "desc": "ごみ収集ルールの周知と、地域の清掃活動を定期的に実施しています。", "tag_id": "gomi"},
+        {"icon": "👴", "title": "高齢者・福祉サポート", "desc": "一人暮らしの高齢者への見守り活動や、福祉情報の提供を行っています。", "tag_id": "koreisha"},
+        {"icon": "📢", "title": "情報共有・広報", "desc": "回覧板を通じて、地域の最新情報をお届けします。", "tag_id": "joho"},
     ],
     "events": [
         {"month": "4月", "name": "総会"}, {"month": "5月", "name": ""},
@@ -543,12 +543,41 @@ def admin_upload_config():
         except: pass
     return redirect(url_for("admin_dashboard"))
 
+# --- 活動タグ詳細ページ（ページ管理画面から中身を差し替え可能） -----------------
+ACTIVITY_TAGS = [
+    {"id": "bohan",    "title": "地域の安全・防災"},
+    {"id": "event",    "title": "地域イベント"},
+    {"id": "saigai",   "title": "防災・災害対策"},
+    {"id": "gomi",     "title": "ごみ・環境美化"},
+    {"id": "koreisha", "title": "高齢者・福祉サポート"},
+    {"id": "joho",     "title": "情報共有・サポート"},
+]
+ACTIVITY_TAG_IDS = {t["id"] for t in ACTIVITY_TAGS}
+
+def default_activity_content(tag_id, title):
+    images = []
+    if tag_id == "event":
+        # 既存の地域イベントページの画像をそのまま初期値として維持
+        images = [url_for("static", filename="images/月の観察会.png")]
+    return {"title": title, "body": "", "images": images}
+
+@app.route("/activity/<tag_id>")
+def activity_detail(tag_id):
+    if tag_id not in ACTIVITY_TAG_IDS:
+        abort(404)
+    tag_title = next(t["title"] for t in ACTIVITY_TAGS if t["id"] == tag_id)
+    content = cloud_json_load(f"activity_{tag_id}", default_activity_content(tag_id, tag_title))
+    return render_template("activity_detail.html", company=JICHIKAI, tag_id=tag_id, content=content)
+
 @app.route('/event/chiiki')
 def event_chiiki():
-    return render_template('event_chiiki.html', company=JICHIKAI)
+    # 旧URL: 新しい汎用ページへリダイレクト（既存のブックマーク・リンク対策）
+    return redirect(url_for("activity_detail", tag_id="event"))
 
 @app.route("/ping")
 def ping(): return "pong", 200
+
+
 
 if __name__ == "__main__":
     app.run(debug=True, host="0.0.0.0", port=5000)
