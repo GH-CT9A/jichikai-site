@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block content %}
+
+<section class="admin-section">
+  <div class="admin-header">
+    <h2>⚙️ ページ管理</h2>
+    <div class="kyogiin-header-btns">
+      <a href="{{ url_for('page_admin_logout') }}" class="btn btn-outline btn-sm">ログアウト</a>
+    </div>
+  </div>
+
+  <div class="admin-card">
+    <h3>📄 活動タグ詳細ページ</h3>
+    <p class="card-desc">準備中：ここに6タグの編集フォームが入ります。</p>
+    <ul>
+      {% for tag in activity_tags %}
+      <li>{{ tag.title }}（{{ tag.id }}）</li>
+      {% endfor %}
+    </ul>
+  </div>
+
+  <div class="admin-card">
+    <h3>🖼️ トップページ写真</h3>
+    <p class="card-desc">準備中：ここに写真の差し替えフォームが入ります。</p>
+  </div>
+
+</section>
+
+{% endblock %}

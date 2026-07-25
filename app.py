@@ -20,8 +20,9 @@ cloudinary.config(
     api_secret = os.environ.get("CLOUDINARY_API_SECRET", "")
 )
 
-KYOGIIN_PREFIXES = ("/kyogiin",)
-ADMIN_PREFIXES   = ("/admin",)
+KYOGIIN_PREFIXES    = ("/kyogiin",)
+ADMIN_PREFIXES      = ("/admin",)
+PAGE_ADMIN_PREFIXES = ("/page_admin",)
 
 @app.before_request
 def auto_logout_on_leave():
@@ -36,6 +37,9 @@ def auto_logout_on_leave():
         if not any(path.startswith(p) for p in ADMIN_PREFIXES):
             session.pop("admin_rank", None)
             session.pop("admin_name", None)
+    if session.get("page_admin_logged_in"):
+        if not any(path.startswith(p) for p in PAGE_ADMIN_PREFIXES):
+            session.pop("page_admin_logged_in", None)
     
 CONFIG_FILE = "config.json"
 
@@ -85,6 +89,7 @@ def strip_month_prefix(name):
 def load_config():
     default = {
         "admin2_password_hash": generate_password_hash("admin2-2024"),
+        "page_admin_password_hash": generate_password_hash("page-admin-2024"),
         "admin1_users":  {},
         "kyogiin_users": {},
         "file_meta":     {}
@@ -519,9 +524,23 @@ def admin_dashboard():
                     del cfg["admin1_users"][name]
                     save_config(cfg)
                     msg = ("success", "削除成功")
+            elif action == "change_page_admin_pw":
+                cur_pw = request.form.get("current_password", "").strip()
+                new_pw = request.form.get("new_password", "").strip()
+                conf_pw = request.form.get("confirm_password", "").strip()
+                if not check_password_hash(cfg["page_admin_password_hash"], cur_pw):
+                    msg = ("danger", "現在のパスワードが違います")
+                elif len(new_pw) < 4:
+                    msg = ("danger", "新しいパスワードは4文字以上で入力してください")
+                elif new_pw != conf_pw:
+                    msg = ("danger", "確認用パスワードが一致しません")
+                else:
+                    cfg["page_admin_password_hash"] = generate_password_hash(new_pw)
+                    save_config(cfg)
+                    msg = ("success", "ページ管理者パスワードを変更しました")
 
         cfg = load_config()
-
+        
     return render_template(
         "admin_dashboard.html",
         company=JICHIKAI,
@@ -578,6 +597,33 @@ def activity_detail(tag_id):
     tag_title = next(t["title"] for t in ACTIVITY_TAGS if t["id"] == tag_id)
     content = cloud_json_load(f"activity_{tag_id}", default_activity_content(tag_id, tag_title))
     return render_template("activity_detail.html", company=JICHIKAI, tag_id=tag_id, content=content)
+
+# --- ページ管理者（活動タグ・トップ写真の編集用） ------------------------------
+@app.route("/page_admin/login", methods=["GET", "POST"])
+def page_admin_login():
+    if session.get("page_admin_logged_in"):
+        return redirect(url_for("page_admin_dashboard"))
+    error = None
+    if request.method == "POST":
+        cfg = load_config()
+        password = request.form.get("password", "").strip()
+        if check_password_hash(cfg["page_admin_password_hash"], password):
+            session["page_admin_logged_in"] = True
+            return redirect(url_for("page_admin_dashboard"))
+        error = "パスワードが違います"
+    return render_template("page_admin_login.html", company=JICHIKAI, error=error)
+
+@app.route("/page_admin/logout")
+def page_admin_logout():
+    session.pop("page_admin_logged_in", None)
+    return redirect(url_for("index"))
+
+@app.route("/page_admin/dashboard")
+def page_admin_dashboard():
+    if not session.get("page_admin_logged_in"):
+        return redirect(url_for("page_admin_login"))
+    return render_template("page_admin_dashboard.html", company=JICHIKAI, activity_tags=ACTIVITY_TAGS)
+# -------------------------------------------------------------------------------
 
 @app.route('/event/chiiki')
 def event_chiiki():

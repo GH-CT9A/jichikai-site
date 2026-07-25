@@ -235,6 +235,28 @@
     {% endif %}
   </div>
 
+  <!-- ページ管理者パスワード変更 -->
+  <div class="admin-card rank2-card">
+    <h3>🛠️ ページ管理者パスワード変更 <span class="rank-label">ランク2専用</span></h3>
+    <p class="card-desc">協議員会専用ページ最下部の「ページ管理者」からログインする際のパスワードです。</p>
+    <form method="POST" action="{{ url_for('admin_dashboard') }}">
+      <input type="hidden" name="action" value="change_page_admin_pw">
+      <div class="form-group">
+        <label>現在のパスワード</label>
+        <input type="password" name="current_password" placeholder="現在のパスワード" required>
+      </div>
+      <div class="form-group">
+        <label>新しいパスワード</label>
+        <input type="password" name="new_password" placeholder="新しいパスワード" required>
+      </div>
+      <div class="form-group">
+        <label>確認用パスワード</label>
+        <input type="password" name="confirm_password" placeholder="もう一度入力" required>
+      </div>
+      <button type="submit" class="btn">変更する</button>
+    </form>
+  </div>
+
   <!-- ランク1管理者管理 -->
   <div class="admin-card rank2-card">
     <h3>🔑 ランク1管理者管理 <span class="rank-label">ランク2専用</span></h3>
