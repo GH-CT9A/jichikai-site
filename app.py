@@ -39,6 +39,39 @@ def auto_logout_on_leave():
     
 CONFIG_FILE = "config.json"
 
+# --- ページ管理用: Cloudinary上にJSONを保存・読込する共通関数 -----------------
+# config.json（ユーザー/パスワード管理）とは別ファイルとして扱う。
+# Render無料プランはディスクが再デプロイ時に消えるため、
+# ページ内容(活動タグ詳細・写真リスト等)はCloudinaryに保存して永続化する。
+
+JSON_CONFIG_FOLDER = "jichikai/config"
+
+def cloud_json_load(name, default):
+    """Cloudinaryのrawリソースからjsonを読み込む。存在しなければdefaultを返す。"""
+    cloud_name = os.environ.get("CLOUDINARY_CLOUD_NAME", "dyhtmmqnk")
+    public_id = f"{JSON_CONFIG_FOLDER}/{name}"
+    url = f"https://res.cloudinary.com/{cloud_name}/raw/upload/{public_id}.json"
+    try:
+        import urllib.request
+        with urllib.request.urlopen(url, timeout=5) as resp:
+            return json.loads(resp.read().decode("utf-8"))
+    except Exception as e:
+        print(f"cloud_json_load({name}) failed, using default: {e}")
+        return default
+
+def cloud_json_save(name, data):
+    """dictをJSON化してCloudinaryにraw保存(上書き)する。"""
+    public_id = f"{JSON_CONFIG_FOLDER}/{name}"
+    payload = json.dumps(data, ensure_ascii=False, indent=2).encode("utf-8")
+    cloudinary.uploader.upload(
+        io.BytesIO(payload),
+        public_id=public_id,
+        resource_type="raw",
+        overwrite=True,
+        invalidate=True
+    )
+# ---------------------------------------------------------------------------
+
 ALLOWED_GIJIROKU = {"pdf"}
 BLOCKED_SHIRYO   = {"docx", "xlsx", "pptx", "doc", "xls", "ppt"}
 IMAGE_EXTS       = {"jpg", "jpeg", "png", "gif", "webp"}
