@@ -540,7 +540,7 @@ def admin_dashboard():
                     msg = ("success", "ページ管理者パスワードを変更しました")
 
         cfg = load_config()
-        
+
     return render_template(
         "admin_dashboard.html",
         company=JICHIKAI,
@@ -622,8 +622,76 @@ def page_admin_logout():
 def page_admin_dashboard():
     if not session.get("page_admin_logged_in"):
         return redirect(url_for("page_admin_login"))
-    return render_template("page_admin_dashboard.html", company=JICHIKAI, activity_tags=ACTIVITY_TAGS)
+    tag_contents = {}
+    for t in ACTIVITY_TAGS:
+        tag_contents[t["id"]] = cloud_json_load(
+            f"activity_{t['id']}", default_activity_content(t["id"], t["title"])
+        )
+    return render_template(
+        "page_admin_dashboard.html",
+        company=JICHIKAI,
+        activity_tags=ACTIVITY_TAGS,
+        tag_contents=tag_contents,
+    )
+
 # -------------------------------------------------------------------------------
+
+@app.route("/page_admin/activity/<tag_id>/save", methods=["POST"])
+def page_admin_activity_save(tag_id):
+    if not session.get("page_admin_logged_in"):
+        return redirect(url_for("page_admin_login"))
+    if tag_id not in ACTIVITY_TAG_IDS:
+        abort(404)
+
+    tag_title = next(t["title"] for t in ACTIVITY_TAGS if t["id"] == tag_id)
+    content = cloud_json_load(f"activity_{tag_id}", default_activity_content(tag_id, tag_title))
+
+    content["body"] = request.form.get("body", "").strip()
+    cloud_json_save(f"activity_{tag_id}", content)
+
+    return redirect(url_for("page_admin_dashboard"))
+
+@app.route("/page_admin/activity/<tag_id>/upload_image", methods=["POST"])
+def page_admin_activity_upload_image(tag_id):
+    if not session.get("page_admin_logged_in"):
+        return redirect(url_for("page_admin_login"))
+    if tag_id not in ACTIVITY_TAG_IDS:
+        abort(404)
+
+    file = request.files.get("image")
+    if file and file.filename:
+        ext = file.filename.rsplit(".", 1)[-1].lower() if "." in file.filename else ""
+        if ext in IMAGE_EXTS:
+            tag_title = next(t["title"] for t in ACTIVITY_TAGS if t["id"] == tag_id)
+            content = cloud_json_load(f"activity_{tag_id}", default_activity_content(tag_id, tag_title))
+
+            import time
+            public_id = f"jichikai/activity/{tag_id}_{int(time.time())}"
+            result = cloudinary.uploader.upload(
+                file,
+                public_id=public_id,
+                resource_type="image",
+                overwrite=True
+            )
+            content.setdefault("images", []).append(result["secure_url"])
+            cloud_json_save(f"activity_{tag_id}", content)
+
+    return redirect(url_for("page_admin_dashboard"))
+
+@app.route("/page_admin/activity/<tag_id>/delete_image", methods=["POST"])
+def page_admin_activity_delete_image(tag_id):
+    if not session.get("page_admin_logged_in"):
+        return redirect(url_for("page_admin_login"))
+    if tag_id not in ACTIVITY_TAG_IDS:
+        abort(404)
+
+    img_url = request.form.get("img_url", "")
+    tag_title = next(t["title"] for t in ACTIVITY_TAGS if t["id"] == tag_id)
+    content = cloud_json_load(f"activity_{tag_id}", default_activity_content(tag_id, tag_title))
+    content["images"] = [u for u in content.get("images", []) if u != img_url]
+    cloud_json_save(f"activity_{tag_id}", content)
+
+    return redirect(url_for("page_admin_dashboard"))
 
 @app.route('/event/chiiki')
 def event_chiiki():

@@ -11,12 +11,49 @@
 
   <div class="admin-card">
     <h3>📄 活動タグ詳細ページ</h3>
-    <p class="card-desc">準備中：ここに6タグの編集フォームが入ります。</p>
-    <ul>
-      {% for tag in activity_tags %}
-      <li>{{ tag.title }}（{{ tag.id }}）</li>
-      {% endfor %}
-    </ul>
+    <p class="card-desc">各タグの本文を編集できます（画像の管理は次のステップで追加予定）。</p>
+    {% for tag in activity_tags %}
+    <div class="month-section">
+      <h5>{{ tag.title }}</h5>
+      <form method="POST" action="{{ url_for('page_admin_activity_save', tag_id=tag.id) }}">
+        <div class="form-group">
+          <label>本文</label>
+          <textarea name="body" rows="4" style="width:100%;">{{ (tag_contents[tag.id].body) if tag.id in tag_contents else '' }}</textarea>
+        </div>
+        <button type="submit" class="btn btn-sm">保存</button>
+      </form>
+
+      <div style="margin-top:12px;">
+        <label>画像</label>
+        {% set imgs = tag_contents[tag.id].images if tag.id in tag_contents else [] %}
+        {% if imgs %}
+        <div style="display:flex; flex-wrap:wrap; gap:10px; margin:8px 0;">
+          {% for img_url in imgs %}
+          <div style="text-align:center;">
+            <img src="{{ img_url }}" style="width:120px; height:90px; object-fit:cover; border-radius:6px;">
+            <form method="POST" action="{{ url_for('page_admin_activity_delete_image', tag_id=tag.id) }}"
+                  onsubmit="return confirm('この画像を削除しますか？')">
+              <input type="hidden" name="img_url" value="{{ img_url }}">
+              <button type="submit" class="btn btn-danger btn-sm" style="margin-top:4px;">削除</button>
+            </form>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <p class="no-files-msg">画像はまだありません</p>
+        {% endif %}
+
+        <form method="POST" action="{{ url_for('page_admin_activity_upload_image', tag_id=tag.id) }}"
+              enctype="multipart/form-data">
+          <input type="file" name="image" accept=".jpg,.jpeg,.png,.gif,.webp" required>
+          <button type="submit" class="btn btn-sm">画像を追加</button>
+        </form>
+        <small style="color:#888; display:block; margin-top:4px;">
+          ※ アップロード直後は画像が表示されないことがあります。その場合は数秒待ってページを再読み込みしてください。
+        </small>
+      </div>
+    </div>
+    {% endfor %}
   </div>
 
   <div class="admin-card">
