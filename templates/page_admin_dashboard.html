@@ -57,8 +57,44 @@
   </div>
 
   <div class="admin-card">
-    <h3>🖼️ トップページ写真</h3>
-    <p class="card-desc">準備中：ここに写真の差し替えフォームが入ります。</p>
+    <h3>🖼️ トップページ写真（チラシ）</h3>
+    <p class="card-desc">トップページ上部で自動的に切り替わる写真です。何枚でも追加・削除できます。</p>
+
+    {% set imgs = hero_photos.images if hero_photos else [] %}
+    {% if imgs %}
+    <div style="display:flex; flex-wrap:wrap; gap:10px; margin:8px 0;">
+      {% for photo in imgs %}
+      <div style="text-align:center;">
+        <img src="{{ photo.url }}" style="width:140px; height:100px; object-fit:cover; border-radius:6px;">
+        <p style="font-size:0.8rem; color:#666; margin:4px 0;">{{ photo.alt }}</p>
+        <form method="POST" action="{{ url_for('page_admin_hero_delete') }}"
+              onsubmit="return confirm('この写真を削除しますか？')">
+          <input type="hidden" name="img_url" value="{{ photo.url }}">
+          <button type="submit" class="btn btn-danger btn-sm">削除</button>
+        </form>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="no-files-msg">写真はまだありません</p>
+    {% endif %}
+
+    <form method="POST" action="{{ url_for('page_admin_hero_upload') }}" enctype="multipart/form-data">
+      <div class="form-row">
+        <div class="form-group">
+          <label>写真の名前（任意）</label>
+          <input type="text" name="alt" placeholder="例：秋祭りチラシ">
+        </div>
+        <div class="form-group form-grow">
+          <label>画像ファイル</label>
+          <input type="file" name="image" accept=".jpg,.jpeg,.png,.gif,.webp" required>
+        </div>
+      </div>
+      <button type="submit" class="btn btn-sm">写真を追加</button>
+    </form>
+    <small style="color:#888; display:block; margin-top:4px;">
+      ※ アップロード直後は表示されないことがあります。その場合は数秒待ってページを再読み込みしてください。
+    </small>
   </div>
 
 </section>

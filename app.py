@@ -627,11 +627,13 @@ def page_admin_dashboard():
         tag_contents[t["id"]] = cloud_json_load(
             f"activity_{t['id']}", default_activity_content(t["id"], t["title"])
         )
+    hero_photos = cloud_json_load("hero_photos", default_hero_photos())
     return render_template(
         "page_admin_dashboard.html",
         company=JICHIKAI,
         activity_tags=ACTIVITY_TAGS,
         tag_contents=tag_contents,
+        hero_photos=hero_photos,
     )
 
 # -------------------------------------------------------------------------------
@@ -690,6 +692,43 @@ def page_admin_activity_delete_image(tag_id):
     content = cloud_json_load(f"activity_{tag_id}", default_activity_content(tag_id, tag_title))
     content["images"] = [u for u in content.get("images", []) if u != img_url]
     cloud_json_save(f"activity_{tag_id}", content)
+
+    return redirect(url_for("page_admin_dashboard"))
+
+@app.route("/page_admin/hero/upload", methods=["POST"])
+def page_admin_hero_upload():
+    if not session.get("page_admin_logged_in"):
+        return redirect(url_for("page_admin_login"))
+
+    file = request.files.get("image")
+    alt_text = request.form.get("alt", "").strip() or "お知らせ画像"
+    if file and file.filename:
+        ext = file.filename.rsplit(".", 1)[-1].lower() if "." in file.filename else ""
+        if ext in IMAGE_EXTS:
+            hero_photos = cloud_json_load("hero_photos", default_hero_photos())
+
+            import time
+            public_id = f"jichikai/hero/photo_{int(time.time())}"
+            result = cloudinary.uploader.upload(
+                file,
+                public_id=public_id,
+                resource_type="image",
+                overwrite=True
+            )
+            hero_photos.setdefault("images", []).append({"url": result["secure_url"], "alt": alt_text})
+            cloud_json_save("hero_photos", hero_photos)
+
+    return redirect(url_for("page_admin_dashboard"))
+
+@app.route("/page_admin/hero/delete", methods=["POST"])
+def page_admin_hero_delete():
+    if not session.get("page_admin_logged_in"):
+        return redirect(url_for("page_admin_login"))
+
+    img_url = request.form.get("img_url", "")
+    hero_photos = cloud_json_load("hero_photos", default_hero_photos())
+    hero_photos["images"] = [p for p in hero_photos.get("images", []) if p.get("url") != img_url]
+    cloud_json_save("hero_photos", hero_photos)
 
     return redirect(url_for("page_admin_dashboard"))
 
