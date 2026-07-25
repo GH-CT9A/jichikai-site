@@ -40,6 +40,7 @@ def auto_logout_on_leave():
     if session.get("page_admin_logged_in"):
         if not any(path.startswith(p) for p in PAGE_ADMIN_PREFIXES):
             session.pop("page_admin_logged_in", None)
+            session.pop("page_admin_name", None)
     
 CONFIG_FILE = "config.json"
 
@@ -89,11 +90,12 @@ def strip_month_prefix(name):
 def load_config():
     default = {
         "admin2_password_hash": generate_password_hash("admin2-2024"),
-        "page_admin_password_hash": generate_password_hash("page-admin-2024"),
-        "admin1_users":  {},
-        "kyogiin_users": {},
-        "file_meta":     {}
+        "admin1_users":     {},
+        "kyogiin_users":    {},
+        "page_admin_users": {},
+        "file_meta":        {}
     }
+
     if os.path.exists(CONFIG_FILE):
         with open(CONFIG_FILE, encoding="utf-8") as f:
             try:
@@ -524,20 +526,26 @@ def admin_dashboard():
                     del cfg["admin1_users"][name]
                     save_config(cfg)
                     msg = ("success", "削除成功")
-            elif action == "change_page_admin_pw":
-                cur_pw = request.form.get("current_password", "").strip()
-                new_pw = request.form.get("new_password", "").strip()
-                conf_pw = request.form.get("confirm_password", "").strip()
-                if not check_password_hash(cfg["page_admin_password_hash"], cur_pw):
-                    msg = ("danger", "現在のパスワードが違います")
-                elif len(new_pw) < 4:
-                    msg = ("danger", "新しいパスワードは4文字以上で入力してください")
-                elif new_pw != conf_pw:
-                    msg = ("danger", "確認用パスワードが一致しません")
-                else:
-                    cfg["page_admin_password_hash"] = generate_password_hash(new_pw)
+            elif action == "add_page_admin":
+                name    = request.form.get("new_name", "")
+                pw      = request.form.get("new_password", "")
+                conf_pw = request.form.get("confirm_password", "")
+                if name and pw == conf_pw:
+                    cfg.setdefault("page_admin_users", {})[name] = {"password_hash": generate_password_hash(pw), "active": True}
                     save_config(cfg)
-                    msg = ("success", "ページ管理者パスワードを変更しました")
+                    msg = ("success", "ページ管理者を追加しました")
+            elif action == "toggle_page_admin":
+                name = request.form.get("user_name", "")
+                if name in cfg.get("page_admin_users", {}):
+                    cfg["page_admin_users"][name]["active"] = not cfg["page_admin_users"][name].get("active", True)
+                    save_config(cfg)
+                    msg = ("success", "切り替え成功")
+            elif action == "delete_page_admin":
+                name = request.form.get("user_name", "")
+                if name in cfg.get("page_admin_users", {}):
+                    del cfg["page_admin_users"][name]
+                    save_config(cfg)
+                    msg = ("success", "削除成功")
 
         cfg = load_config()
 
@@ -549,6 +557,7 @@ def admin_dashboard():
         gijiroku_by_month=get_files_by_month("gijiroku"),
         kyogiin_users=cfg.get("kyogiin_users", {}),
         admin1_users=cfg.get("admin1_users", {}),
+        page_admin_users=cfg.get("page_admin_users", {}),
         file_meta=cfg.get("file_meta", {}),
         admin_rank=admin_rank(),
         admin_name=session.get("admin_name", ""),
@@ -606,17 +615,45 @@ def page_admin_login():
     error = None
     if request.method == "POST":
         cfg = load_config()
+        name = request.form.get("name", "").strip()
         password = request.form.get("password", "").strip()
-        if check_password_hash(cfg["page_admin_password_hash"], password):
-            session["page_admin_logged_in"] = True
-            return redirect(url_for("page_admin_dashboard"))
-        error = "パスワードが違います"
+        users = cfg.get("page_admin_users", {})
+        if name in users and users[name].get("active", True):
+            if check_password_hash(users[name]["password_hash"], password):
+                session["page_admin_logged_in"] = True
+                session["page_admin_name"] = name
+                return redirect(url_for("page_admin_dashboard"))
+        error = "名前またはパスワードが違います"
     return render_template("page_admin_login.html", company=JICHIKAI, error=error)
 
 @app.route("/page_admin/logout")
 def page_admin_logout():
     session.pop("page_admin_logged_in", None)
+    session.pop("page_admin_name", None)
     return redirect(url_for("index"))
+
+@app.route("/page_admin/change_password", methods=["GET", "POST"])
+def page_admin_change_password():
+    if not session.get("page_admin_logged_in"):
+        return redirect(url_for("page_admin_login"))
+    user_name = session.get("page_admin_name", "")
+    msg = None
+    if request.method == "POST":
+        cfg = load_config()
+        cur_pw = request.form.get("current_password", "").strip()
+        new_pw = request.form.get("new_password", "").strip()
+        conf_pw = request.form.get("confirm_password", "").strip()
+        if not check_password_hash(cfg["page_admin_users"][user_name]["password_hash"], cur_pw):
+            msg = ("danger", "現在のパスワードが違います")
+        elif len(new_pw) < 4:
+            msg = ("danger", "新しいパスワードは4文字以上で入力してください")
+        elif new_pw != conf_pw:
+            msg = ("danger", "確認用パスワードが一致しません")
+        else:
+            cfg["page_admin_users"][user_name]["password_hash"] = generate_password_hash(new_pw)
+            save_config(cfg)
+            msg = ("success", "パスワードを変更しました")
+    return render_template("page_admin_change_password.html", company=JICHIKAI, user_name=user_name, msg=msg)
 
 @app.route("/page_admin/dashboard")
 def page_admin_dashboard():

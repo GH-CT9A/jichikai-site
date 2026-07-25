@@ -235,26 +235,62 @@
     {% endif %}
   </div>
 
-  <!-- ページ管理者パスワード変更 -->
+  <!-- ページ管理者ユーザー管理 -->
   <div class="admin-card rank2-card">
-    <h3>🛠️ ページ管理者パスワード変更 <span class="rank-label">ランク2専用</span></h3>
-    <p class="card-desc">協議員会専用ページ最下部の「ページ管理者」からログインする際のパスワードです。</p>
-    <form method="POST" action="{{ url_for('admin_dashboard') }}">
-      <input type="hidden" name="action" value="change_page_admin_pw">
-      <div class="form-group">
-        <label>現在のパスワード</label>
-        <input type="password" name="current_password" placeholder="現在のパスワード" required>
-      </div>
-      <div class="form-group">
-        <label>新しいパスワード</label>
-        <input type="password" name="new_password" placeholder="新しいパスワード" required>
-      </div>
-      <div class="form-group">
-        <label>確認用パスワード</label>
-        <input type="password" name="confirm_password" placeholder="もう一度入力" required>
-      </div>
-      <button type="submit" class="btn">変更する</button>
-    </form>
+    <h3>🛠️ ページ管理者管理 <span class="rank-label">ランク2専用</span></h3>
+    <p class="card-desc">協議員会専用ページ最下部の「ページ管理者」からログインできる人を管理します。</p>
+    <div class="add-user-form">
+      <h4>新規ページ管理者追加</h4>
+      <form method="POST" action="{{ url_for('admin_dashboard') }}">
+        <input type="hidden" name="action" value="add_page_admin">
+        <div class="form-row">
+          <div class="form-group">
+            <label>お名前</label>
+            <input type="text" name="new_name" placeholder="例：山田太郎" required>
+          </div>
+          <div class="form-group">
+            <label>パスワード</label>
+            <input type="password" name="new_password" placeholder="パスワード" required>
+          </div>
+          <div class="form-group">
+            <label>確認用パスワード</label>
+            <input type="password" name="confirm_password" placeholder="もう一度入力" required>
+          </div>
+        </div>
+        <button type="submit" class="btn">追加する</button>
+      </form>
+    </div>
+    <h4 style="margin-top:20px;">登録ページ管理者一覧（{{ page_admin_users|length }}人）</h4>
+    {% if page_admin_users %}
+    <div class="user-table-wrap">
+      <table class="user-table">
+        <thead><tr><th>名前</th><th>状態</th><th>操作</th></tr></thead>
+        <tbody>
+          {% for name, info in page_admin_users.items() %}
+          <tr class="{{ 'inactive' if not info.get('active', true) }}">
+            <td>{{ name }}</td>
+            <td><span class="badge {{ 'badge-active' if info.get('active', true) else 'badge-inactive' }}">{{ '有効' if info.get('active', true) else '無効' }}</span></td>
+            <td>
+              <form method="POST" action="{{ url_for('admin_dashboard') }}" style="display:inline">
+                <input type="hidden" name="action" value="toggle_page_admin">
+                <input type="hidden" name="user_name" value="{{ name }}">
+                <button class="btn btn-sm {{ 'btn-warning' if info.get('active', true) else 'btn-success' }}">{{ '無効化' if info.get('active', true) else '有効化' }}</button>
+              </form>
+              <form method="POST" action="{{ url_for('admin_dashboard') }}" style="display:inline"
+                    onsubmit="return confirm('「{{ name }}」を削除しますか？')">
+                <input type="hidden" name="action" value="delete_page_admin">
+                <input type="hidden" name="user_name" value="{{ name }}">
+                <button class="btn btn-danger btn-sm">削除</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+      <p class="no-files-msg">👤 ページ管理者がまだ登録されていません</p>
+    {% endif %}
   </div>
 
   <!-- ランク1管理者管理 -->
