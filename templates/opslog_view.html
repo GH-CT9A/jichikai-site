@@ -5,6 +5,7 @@
   <div class="admin-header">
     <h2>📊 操作履歴</h2>
     <div class="kyogiin-header-btns">
+      <a href="{{ url_for('opslog_download_csv') }}" class="btn btn-outline btn-sm">⬇️ CSVダウンロード</a>
       <a href="{{ url_for('opslog_change_password') }}" class="btn btn-outline btn-sm">🔑 パスワード変更</a>
       <a href="{{ url_for('opslog_logout') }}" class="btn btn-outline btn-sm">ログアウト</a>
     </div>

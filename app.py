@@ -917,6 +917,28 @@ def opslog_change_password():
     return render_template("opslog_change_password.html", company=JICHIKAI, msg=msg)
 # -------------------------------------------------------------------------------
 
+@app.route("/opslog/download_csv")
+def opslog_download_csv():
+    if not session.get("opslog_logged_in"):
+        return redirect(url_for("opslog_login"))
+    log_data = cloud_json_load("access_log", {"entries": []})
+    entries = list(reversed(log_data.get("entries", [])))
+
+    import csv
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow(["日時", "区分", "名前", "操作", "詳細"])
+    for e in entries:
+        writer.writerow([e.get("time", ""), e.get("role", ""), e.get("name", ""), e.get("action", ""), e.get("detail", "")])
+
+    csv_bytes = ("\ufeff" + buf.getvalue()).encode("utf-8")  # Excel対策でBOM付きUTF-8
+    return send_file(
+        io.BytesIO(csv_bytes),
+        as_attachment=True,
+        download_name="operation_log.csv",
+        mimetype="text/csv"
+    )
+
 def event_chiiki():
     # 旧URL: 新しい汎用ページへリダイレクト（既存のブックマーク・リンク対策）
     return redirect(url_for("activity_detail", tag_id="event"))
