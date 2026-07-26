@@ -88,6 +88,38 @@ def cloud_json_save(name, data):
     )
 # ---------------------------------------------------------------------------
 
+CONFIG_PUBLIC_ID = "jichikai/config/app_config"
+
+def cloud_config_load():
+    """config.jsonをCloudinaryの署名付きURL(authenticated)から読み込む。取得できなければNoneを返す。"""
+    try:
+        url, _ = cloudinary_url(
+            CONFIG_PUBLIC_ID,
+            resource_type="raw",
+            type="authenticated",
+            sign_url=True,
+            format="json",
+        )
+        import urllib.request
+        with urllib.request.urlopen(url, timeout=5) as resp:
+            return json.loads(resp.read().decode("utf-8"))
+    except Exception as e:
+        print(f"cloud_config_load failed: {e}")
+        return None
+
+def cloud_config_save(data):
+    """config.jsonを署名付きURLでしか読めない形でCloudinaryに保存(上書き)する。"""
+    payload = json.dumps(data, ensure_ascii=False, indent=2).encode("utf-8")
+    cloudinary.uploader.upload(
+        io.BytesIO(payload),
+        public_id=CONFIG_PUBLIC_ID,
+        resource_type="raw",
+        type="authenticated",
+        format="json",
+        overwrite=True,
+        invalidate=True
+    )
+
 def log_action(role, name, action, detail=""):
     """操作履歴をCloudinary上に記録する。失敗しても本来の処理は止めない。"""
     try:
@@ -128,20 +160,29 @@ def load_config():
         "file_meta":        {}
     }
 
+    data = cloud_config_load()
+    if data is not None:
+        for k, v in default.items():
+            data.setdefault(k, v)
+        return data
+
+    # Cloudinary側にまだ何もない場合: ローカルに残っているconfig.jsonがあれば
+    # 一度だけ読み込み、Cloudinaryへ移行する（以降はCloudinaryのみを使う）
     if os.path.exists(CONFIG_FILE):
         with open(CONFIG_FILE, encoding="utf-8") as f:
             try:
-                data = json.load(f)
+                local_data = json.load(f)
                 for k, v in default.items():
-                    data.setdefault(k, v)
-                return data
-            except:
-                return default
+                    local_data.setdefault(k, v)
+                cloud_config_save(local_data)
+                return local_data
+            except Exception as e:
+                print(f"local config.json migration failed: {e}")
+
     return default
 
 def save_config(cfg):
-    with open(CONFIG_FILE, "w", encoding="utf-8") as f:
-        json.dump(cfg, f, ensure_ascii=False, indent=2)
+    cloud_config_save(cfg)
 
 def allowed_gijiroku(fn):
     return "." in fn and fn.rsplit(".", 1)[1].lower() in ALLOWED_GIJIROKU
