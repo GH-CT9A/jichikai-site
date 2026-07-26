@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block content %}
+
+<section class="admin-section">
+  <div class="admin-header">
+    <h2>📊 操作履歴</h2>
+    <div class="kyogiin-header-btns">
+      <a href="{{ url_for('opslog_change_password') }}" class="btn btn-outline btn-sm">🔑 パスワード変更</a>
+      <a href="{{ url_for('opslog_logout') }}" class="btn btn-outline btn-sm">ログアウト</a>
+    </div>
+  </div>
+
+  <div class="admin-card">
+    <p class="card-desc">直近1000件までの操作履歴を新しい順に表示しています。</p>
+    {% if entries %}
+    <div class="user-table-wrap">
+      <table class="user-table">
+        <thead><tr><th>日時</th><th>区分</th><th>名前</th><th>操作</th><th>詳細</th></tr></thead>
+        <tbody>
+          {% for e in entries %}
+          <tr>
+            <td>{{ e.time }}</td>
+            <td>{{ e.role }}</td>
+            <td>{{ e.name }}</td>
+            <td>{{ e.action }}</td>
+            <td>{{ e.detail }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+      <p class="no-files-msg">記録はまだありません</p>
+    {% endif %}
+  </div>
+</section>
+
+{% endblock %}

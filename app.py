@@ -23,6 +23,7 @@ cloudinary.config(
 KYOGIIN_PREFIXES    = ("/kyogiin",)
 ADMIN_PREFIXES      = ("/admin",)
 PAGE_ADMIN_PREFIXES = ("/page_admin",)
+OPSLOG_PREFIXES     = ("/opslog",)
 # ランク2管理者がページ画像編集フォーム（ページ管理者と共通のルート）を使う際に
 # 自動ログアウトの対象から外すためのURL
 PAGE_EDIT_SHARED_PREFIXES = ("/page_admin/activity", "/page_admin/hero")
@@ -48,6 +49,9 @@ def auto_logout_on_leave():
         if not any(path.startswith(p) for p in PAGE_ADMIN_PREFIXES):
             session.pop("page_admin_logged_in", None)
             session.pop("page_admin_name", None)
+    if session.get("opslog_logged_in"):
+        if not any(path.startswith(p) for p in OPSLOG_PREFIXES):
+            session.pop("opslog_logged_in", None)
     
 CONFIG_FILE = "config.json"
 
@@ -84,6 +88,26 @@ def cloud_json_save(name, data):
     )
 # ---------------------------------------------------------------------------
 
+def log_action(role, name, action, detail=""):
+    """操作履歴をCloudinary上に記録する。失敗しても本来の処理は止めない。"""
+    try:
+        import datetime
+        now = datetime.datetime.utcnow() + datetime.timedelta(hours=9)
+        entry = {
+            "time": now.strftime("%Y-%m-%d %H:%M:%S"),
+            "role": role,
+            "name": name or "",
+            "action": action,
+            "detail": detail,
+        }
+        log_data = cloud_json_load("access_log", {"entries": []})
+        entries = log_data.get("entries", [])
+        entries.append(entry)
+        entries = entries[-1000:]  # 直近1000件のみ保持
+        cloud_json_save("access_log", {"entries": entries})
+    except Exception as e:
+        print(f"log_action failed: {e}")
+
 ALLOWED_GIJIROKU = {"pdf"}
 BLOCKED_SHIRYO   = {"docx", "xlsx", "pptx", "doc", "xls", "ppt"}
 IMAGE_EXTS       = {"jpg", "jpeg", "png", "gif", "webp"}
@@ -97,6 +121,7 @@ def strip_month_prefix(name):
 def load_config():
     default = {
         "admin2_password_hash": generate_password_hash("admin2-2024"),
+        "access_log_password_hash": generate_password_hash("opslog-init-2024"),
         "admin1_users":     {},
         "kyogiin_users":    {},
         "page_admin_users": {},
@@ -245,6 +270,7 @@ def kyogiin():
             if check_password_hash(users[name]["password_hash"], password):
                 session["kyogiin_logged_in"] = True
                 session["kyogiin_name"] = name
+                log_action("協議員", name, "ログイン")
                 return redirect(url_for("kyogiin_files", month="4月"))
         error = "名前またはパスワードが違います"
     return render_template("kyogiin_login.html", company=JICHIKAI, error=error)
@@ -298,6 +324,10 @@ def kyogiin_view_file(file_type, filename):
         return redirect(url_for("kyogiin"))
     if file_type not in ("shiryo", "gijiroku"): abort(404)
     safe = os.path.basename(filename)
+    if session.get("kyogiin_logged_in"):
+        log_action("協議員", session.get("kyogiin_name", ""), "閲覧", f"{file_type}: {get_display_name(safe)}")
+    elif admin_rank() >= 1:
+        log_action("管理者", session.get("admin_name", ""), "閲覧", f"{file_type}: {get_display_name(safe)}")
     cfg = load_config()
     meta = get_file_meta(cfg, safe) if file_type == "shiryo" else {"watermark": True, "download": False, "print": False}
     ext = safe.rsplit(".", 1)[-1].lower() if "." in safe else ""
@@ -347,6 +377,7 @@ def admin1_login():
             if check_password_hash(a1[name]["password_hash"], password):
                 session["admin_rank"] = 1
                 session["admin_name"] = name
+                log_action("管理者", name, "ログイン")
                 return redirect(url_for("admin_dashboard"))
         error = "名前またはパスワードが違います"
     return render_template("admin1_login.html", company=JICHIKAI, error=error)
@@ -385,6 +416,7 @@ def admin_login():
         if check_password_hash(cfg["admin2_password_hash"], password):
             session["admin_rank"] = 2
             session["admin_name"] = "上位管理者"
+            log_action("管理者", "上位管理者", "ログイン")
             return redirect(url_for("admin_dashboard"))
         error = "パスワードが違います"
     return render_template("admin_login.html", company=JICHIKAI, error=error)
@@ -450,10 +482,12 @@ def admin_dashboard():
                     }
                     save_config(cfg)
                     msg = ("success", f"{month}に資料「{original_filename}」をアップロードしました")
+                    log_action("管理者", session.get("admin_name", ""), "資料アップロード", f"{month}: {original_filename}")
                 except Exception as e:
                     msg = ("danger", f"失敗: {e}")
 
         elif action == "upload_gijiroku":
+
             month = request.form.get("month", "4月")
             file = request.files.get("file")
             if not file or not allowed_gijiroku(file.filename):
@@ -474,6 +508,7 @@ def admin_dashboard():
                         overwrite=True
                     )
                     msg = ("success", f"{month}に議事録「{original_filename}」をアップロードしました")
+                    log_action("管理者", session.get("admin_name", ""), "議事録アップロード", f"{month}: {original_filename}")
                 except Exception as e:
                     msg = ("danger", f"失敗: {e}")
 
@@ -487,6 +522,7 @@ def admin_dashboard():
                 cfg.get("file_meta", {}).pop(fname, None)
                 save_config(cfg)
                 msg = ("success", f"「{get_display_name(fname)}」を削除しました")
+                log_action("管理者", session.get("admin_name", ""), "資料削除", get_display_name(fname))
             except Exception as e:
                 msg = ("danger", f"失敗: {e}")
 
@@ -497,6 +533,7 @@ def admin_dashboard():
                 cloudinary.uploader.destroy(f"jichikai/gijiroku/{base}", resource_type="image")
                 save_config(cfg)
                 msg = ("success", f"「{get_display_name(fname)}」を削除しました")
+                log_action("管理者", session.get("admin_name", ""), "議事録削除", get_display_name(fname))
             except Exception as e:
                 msg = ("danger", f"失敗: {e}")
 
@@ -561,6 +598,20 @@ def admin_dashboard():
                     del cfg["page_admin_users"][name]
                     save_config(cfg)
                     msg = ("success", "削除成功")
+            elif action == "change_access_log_pw":
+                cur_pw = request.form.get("current_password", "").strip()
+                new_pw = request.form.get("new_password", "").strip()
+                conf_pw = request.form.get("confirm_password", "").strip()
+                if not check_password_hash(cfg.get("access_log_password_hash", ""), cur_pw):
+                    msg = ("danger", "現在のパスワードが違います")
+                elif len(new_pw) < 4:
+                    msg = ("danger", "新しいパスワードは4文字以上で入力してください")
+                elif new_pw != conf_pw:
+                    msg = ("danger", "確認用パスワードが一致しません")
+                else:
+                    cfg["access_log_password_hash"] = generate_password_hash(new_pw)
+                    save_config(cfg)
+                    msg = ("success", "操作履歴パスワードを変更しました")
 
         cfg = load_config()
 
@@ -640,6 +691,7 @@ def page_admin_login():
             if check_password_hash(users[name]["password_hash"], password):
                 session["page_admin_logged_in"] = True
                 session["page_admin_name"] = name
+                log_action("ページ管理者", name, "ログイン")
                 return redirect(url_for("page_admin_dashboard"))
         error = "名前またはパスワードが違います"
     return render_template("page_admin_login.html", company=JICHIKAI, error=error)
@@ -672,6 +724,12 @@ def page_admin_change_password():
             save_config(cfg)
             msg = ("success", "パスワードを変更しました")
     return render_template("page_admin_change_password.html", company=JICHIKAI, user_name=user_name, msg=msg)
+
+def _page_editor_actor():
+    """ページ画像編集ルートの操作者を判定する（ページ管理者 or 管理者）"""
+    if session.get("page_admin_logged_in"):
+        return "ページ管理者", session.get("page_admin_name", "")
+    return "管理者", session.get("admin_name", "")
 
 def _page_editor_redirect():
     """画像編集後の戻り先: ページ管理者ならページ管理画面へ、ランク2管理者なら管理ダッシュボードへ"""
@@ -713,6 +771,8 @@ def page_admin_activity_save(tag_id):
     content["body"] = request.form.get("body", "").strip()
     cloud_json_save(f"activity_{tag_id}", content)
 
+    role, name = _page_editor_actor()
+    log_action(role, name, "活動タグ本文保存", tag_title)
     return _page_editor_redirect()
 
 @app.route("/page_admin/activity/<tag_id>/upload_image", methods=["POST"])
@@ -740,6 +800,9 @@ def page_admin_activity_upload_image(tag_id):
             content.setdefault("images", []).append(result["secure_url"])
             cloud_json_save(f"activity_{tag_id}", content)
 
+            role, name = _page_editor_actor()
+            log_action(role, name, "活動タグ画像追加", tag_title)
+
     return _page_editor_redirect()
 
 @app.route("/page_admin/activity/<tag_id>/delete_image", methods=["POST"])
@@ -755,6 +818,8 @@ def page_admin_activity_delete_image(tag_id):
     content["images"] = [u for u in content.get("images", []) if u != img_url]
     cloud_json_save(f"activity_{tag_id}", content)
 
+    role, name = _page_editor_actor()
+    log_action(role, name, "活動タグ画像削除", tag_title)
     return _page_editor_redirect()
 
 @app.route("/page_admin/hero/upload", methods=["POST"])
@@ -780,6 +845,9 @@ def page_admin_hero_upload():
             hero_photos.setdefault("images", []).append({"url": result["secure_url"], "alt": alt_text})
             cloud_json_save("hero_photos", hero_photos)
 
+            role, name = _page_editor_actor()
+            log_action(role, name, "トップ写真追加", alt_text)
+
     return _page_editor_redirect()
 
 @app.route("/page_admin/hero/delete", methods=["POST"])
@@ -792,9 +860,63 @@ def page_admin_hero_delete():
     hero_photos["images"] = [p for p in hero_photos.get("images", []) if p.get("url") != img_url]
     cloud_json_save("hero_photos", hero_photos)
 
+    role, name = _page_editor_actor()
+    log_action(role, name, "トップ写真削除")
     return _page_editor_redirect()
 
 @app.route('/event/chiiki')
+
+# --- 操作履歴（アイコン・リンクは一切設置しない。URLを直接開いてアクセスする） ------
+@app.route("/opslog/login", methods=["GET", "POST"])
+def opslog_login():
+    if session.get("opslog_logged_in"):
+        return redirect(url_for("opslog_view"))
+    error = None
+    if request.method == "POST":
+        cfg = load_config()
+        password = request.form.get("password", "").strip()
+        if check_password_hash(cfg.get("access_log_password_hash", ""), password):
+            session["opslog_logged_in"] = True
+            return redirect(url_for("opslog_view"))
+        error = "パスワードが違います"
+    return render_template("opslog_login.html", company=JICHIKAI, error=error)
+
+@app.route("/opslog/logout")
+def opslog_logout():
+    session.pop("opslog_logged_in", None)
+    return redirect(url_for("index"))
+
+@app.route("/opslog")
+def opslog_view():
+    if not session.get("opslog_logged_in"):
+        return redirect(url_for("opslog_login"))
+    log_data = cloud_json_load("access_log", {"entries": []})
+    entries = list(reversed(log_data.get("entries", [])))
+    return render_template("opslog_view.html", company=JICHIKAI, entries=entries)
+
+@app.route("/opslog/change_password", methods=["GET", "POST"])
+def opslog_change_password():
+    if not session.get("opslog_logged_in"):
+        return redirect(url_for("opslog_login"))
+    msg = None
+    if request.method == "POST":
+        cfg = load_config()
+        cur_pw = request.form.get("current_password", "").strip()
+        new_pw = request.form.get("new_password", "").strip()
+        conf_pw = request.form.get("confirm_password", "").strip()
+        if not check_password_hash(cfg.get("access_log_password_hash", ""), cur_pw):
+            msg = ("danger", "現在のパスワードが違います")
+        elif len(new_pw) < 4:
+            msg = ("danger", "新しいパスワードは4文字以上で入力してください")
+        elif new_pw != conf_pw:
+            msg = ("danger", "確認用パスワードが一致しません")
+        else:
+            cfg["access_log_password_hash"] = generate_password_hash(new_pw)
+            save_config(cfg)
+            msg = ("success", "パスワードを変更しました")
+    return render_template("opslog_change_password.html", company=JICHIKAI, msg=msg)
+# -------------------------------------------------------------------------------
+
 def event_chiiki():
     # 旧URL: 新しい汎用ページへリダイレクト（既存のブックマーク・リンク対策）
     return redirect(url_for("activity_detail", tag_id="event"))
