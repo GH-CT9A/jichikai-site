@@ -26,7 +26,9 @@ PAGE_ADMIN_PREFIXES = ("/page_admin",)
 # ランク2管理者がページ画像編集フォーム（ページ管理者と共通のルート）を使う際に
 # 自動ログアウトの対象から外すためのURL
 PAGE_EDIT_SHARED_PREFIXES = ("/page_admin/activity", "/page_admin/hero")
-ADMIN_SAFE_PREFIXES = ADMIN_PREFIXES + PAGE_EDIT_SHARED_PREFIXES
+# 管理者が資料・議事録の「表示」ボタンを押した時にも管理者セッションを維持する
+FILE_VIEW_SHARED_PREFIXES = ("/kyogiin/view", "/kyogiin/raw")
+ADMIN_SAFE_PREFIXES = ADMIN_PREFIXES + PAGE_EDIT_SHARED_PREFIXES + FILE_VIEW_SHARED_PREFIXES
 
 @app.before_request
 def auto_logout_on_leave():
@@ -292,7 +294,7 @@ def kyogiin_change_password():
 
 @app.route("/kyogiin/view/<file_type>/<path:filename>")
 def kyogiin_view_file(file_type, filename):
-    if not session.get("kyogiin_logged_in"):
+    if not session.get("kyogiin_logged_in") and admin_rank() < 1:
         return redirect(url_for("kyogiin"))
     if file_type not in ("shiryo", "gijiroku"): abort(404)
     safe = os.path.basename(filename)
@@ -324,7 +326,7 @@ def kyogiin_view_file(file_type, filename):
 
 @app.route("/kyogiin/raw/<file_type>/<path:filename>")
 def kyogiin_raw_file(file_type, filename):
-    if not session.get("kyogiin_logged_in"): abort(403)
+    if not session.get("kyogiin_logged_in") and admin_rank() < 1: abort(403)
     safe = os.path.basename(filename)
     if file_type == "shiryo":
         cfg = load_config()
