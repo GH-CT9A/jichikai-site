@@ -144,7 +144,11 @@
       {% if allow_print %}
       <button onclick="handlePrint()">印刷</button>
       {% endif %}
+      {% if session.get('admin_rank') %}
+      <a href="{{ url_for('admin_dashboard') }}">← 戻る</a>
+      {% else %}
       <a href="{{ url_for('kyogiin_files', month=back_month) }}">← 戻る</a>
+      {% endif %}
     </div>
   </div>
 
