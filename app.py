@@ -23,18 +23,23 @@ cloudinary.config(
 KYOGIIN_PREFIXES    = ("/kyogiin",)
 ADMIN_PREFIXES      = ("/admin",)
 PAGE_ADMIN_PREFIXES = ("/page_admin",)
+# ランク2管理者がページ画像編集フォーム（ページ管理者と共通のルート）を使う際に
+# 自動ログアウトの対象から外すためのURL
+PAGE_EDIT_SHARED_PREFIXES = ("/page_admin/activity", "/page_admin/hero")
+ADMIN_SAFE_PREFIXES = ADMIN_PREFIXES + PAGE_EDIT_SHARED_PREFIXES
 
 @app.before_request
 def auto_logout_on_leave():
     path = request.path
-    if path.startswith("/static") or path == "/ping" or path == "/favicon.ico":
+    if path.startswith("/static") or path == "/ping" or path == "/favicon.ico" or path.startswith("/.well-known"):
         return
+
     if session.get("kyogiin_logged_in"):
         if not any(path.startswith(p) for p in KYOGIIN_PREFIXES):
             session.pop("kyogiin_logged_in", None)
             session.pop("kyogiin_name", None)
     if session.get("admin_rank"):
-        if not any(path.startswith(p) for p in ADMIN_PREFIXES):
+        if not any(path.startswith(p) for p in ADMIN_SAFE_PREFIXES):
             session.pop("admin_rank", None)
             session.pop("admin_name", None)
     if session.get("page_admin_logged_in"):
@@ -393,6 +398,14 @@ def admin_dashboard():
     if admin_rank() < 1: return redirect(url_for("admin_login"))
     cfg = load_config()
     msg = None
+    page_tag_contents = {}
+    page_hero_photos = {}
+    if admin_rank() == 2:
+        for t in ACTIVITY_TAGS:
+            page_tag_contents[t["id"]] = cloud_json_load(
+                f"activity_{t['id']}", default_activity_content(t["id"], t["title"])
+            )
+        page_hero_photos = cloud_json_load("hero_photos", default_hero_photos())
 
     if request.method == "POST":
         action = request.form.get("action")
@@ -562,7 +575,10 @@ def admin_dashboard():
         admin_rank=admin_rank(),
         admin_name=session.get("admin_name", ""),
         msg=msg,
-        get_display_name=get_display_name
+        get_display_name=get_display_name,
+        activity_tags=ACTIVITY_TAGS,
+        page_tag_contents=page_tag_contents,
+        page_hero_photos=page_hero_photos,
     )
 
 @app.route("/admin/download_config")
@@ -655,8 +671,15 @@ def page_admin_change_password():
             msg = ("success", "パスワードを変更しました")
     return render_template("page_admin_change_password.html", company=JICHIKAI, user_name=user_name, msg=msg)
 
+def _page_editor_redirect():
+    """画像編集後の戻り先: ページ管理者ならページ管理画面へ、ランク2管理者なら管理ダッシュボードへ"""
+    if session.get("page_admin_logged_in"):
+        return redirect(url_for("page_admin_dashboard"))
+    return redirect(url_for("admin_dashboard"))
+
 @app.route("/page_admin/dashboard")
 def page_admin_dashboard():
+
     if not session.get("page_admin_logged_in"):
         return redirect(url_for("page_admin_login"))
     tag_contents = {}
@@ -677,7 +700,7 @@ def page_admin_dashboard():
 
 @app.route("/page_admin/activity/<tag_id>/save", methods=["POST"])
 def page_admin_activity_save(tag_id):
-    if not session.get("page_admin_logged_in"):
+    if not session.get("page_admin_logged_in") and admin_rank() < 2:
         return redirect(url_for("page_admin_login"))
     if tag_id not in ACTIVITY_TAG_IDS:
         abort(404)
@@ -688,11 +711,11 @@ def page_admin_activity_save(tag_id):
     content["body"] = request.form.get("body", "").strip()
     cloud_json_save(f"activity_{tag_id}", content)
 
-    return redirect(url_for("page_admin_dashboard"))
+    return _page_editor_redirect()
 
 @app.route("/page_admin/activity/<tag_id>/upload_image", methods=["POST"])
 def page_admin_activity_upload_image(tag_id):
-    if not session.get("page_admin_logged_in"):
+    if not session.get("page_admin_logged_in") and admin_rank() < 2:
         return redirect(url_for("page_admin_login"))
     if tag_id not in ACTIVITY_TAG_IDS:
         abort(404)
@@ -715,11 +738,11 @@ def page_admin_activity_upload_image(tag_id):
             content.setdefault("images", []).append(result["secure_url"])
             cloud_json_save(f"activity_{tag_id}", content)
 
-    return redirect(url_for("page_admin_dashboard"))
+    return _page_editor_redirect()
 
 @app.route("/page_admin/activity/<tag_id>/delete_image", methods=["POST"])
 def page_admin_activity_delete_image(tag_id):
-    if not session.get("page_admin_logged_in"):
+    if not session.get("page_admin_logged_in") and admin_rank() < 2:
         return redirect(url_for("page_admin_login"))
     if tag_id not in ACTIVITY_TAG_IDS:
         abort(404)
@@ -730,11 +753,11 @@ def page_admin_activity_delete_image(tag_id):
     content["images"] = [u for u in content.get("images", []) if u != img_url]
     cloud_json_save(f"activity_{tag_id}", content)
 
-    return redirect(url_for("page_admin_dashboard"))
+    return _page_editor_redirect()
 
 @app.route("/page_admin/hero/upload", methods=["POST"])
 def page_admin_hero_upload():
-    if not session.get("page_admin_logged_in"):
+    if not session.get("page_admin_logged_in") and admin_rank() < 2:
         return redirect(url_for("page_admin_login"))
 
     file = request.files.get("image")
@@ -755,19 +778,19 @@ def page_admin_hero_upload():
             hero_photos.setdefault("images", []).append({"url": result["secure_url"], "alt": alt_text})
             cloud_json_save("hero_photos", hero_photos)
 
-    return redirect(url_for("page_admin_dashboard"))
+    return _page_editor_redirect()
 
 @app.route("/page_admin/hero/delete", methods=["POST"])
 def page_admin_hero_delete():
-    if not session.get("page_admin_logged_in"):
+    if not session.get("page_admin_logged_in") and admin_rank() < 2:
         return redirect(url_for("page_admin_login"))
-
+    
     img_url = request.form.get("img_url", "")
     hero_photos = cloud_json_load("hero_photos", default_hero_photos())
     hero_photos["images"] = [p for p in hero_photos.get("images", []) if p.get("url") != img_url]
     cloud_json_save("hero_photos", hero_photos)
 
-    return redirect(url_for("page_admin_dashboard"))
+    return _page_editor_redirect()
 
 @app.route('/event/chiiki')
 def event_chiiki():
