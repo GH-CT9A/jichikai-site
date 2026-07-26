@@ -169,6 +169,92 @@
   <!-- ══════ ランク2専用 ══════ -->
   {% if admin_rank == 2 %}
 
+  <!-- 活動タグ画像・トップ写真管理（ページ管理者と同じ機能） -->
+  <div class="admin-card rank2-card">
+    <h3>📄 活動タグ詳細ページ <span class="rank-label">ランク2専用</span></h3>
+    <p class="card-desc">各タグの本文・画像を編集できます。</p>
+    {% for tag in activity_tags %}
+    <div class="month-section">
+      <h5>{{ tag.title }}</h5>
+      <form method="POST" action="{{ url_for('page_admin_activity_save', tag_id=tag.id) }}">
+        <div class="form-group">
+          <label>本文</label>
+          <textarea name="body" rows="4" style="width:100%;">{{ (page_tag_contents[tag.id].body) if tag.id in page_tag_contents else '' }}</textarea>
+        </div>
+        <button type="submit" class="btn btn-sm">保存</button>
+      </form>
+
+      <div style="margin-top:12px;">
+        <label>画像</label>
+        {% set imgs = page_tag_contents[tag.id].images if tag.id in page_tag_contents else [] %}
+        {% if imgs %}
+        <div style="display:flex; flex-wrap:wrap; gap:10px; margin:8px 0;">
+          {% for img_url in imgs %}
+          <div style="text-align:center;">
+            <img src="{{ img_url }}" style="width:120px; height:90px; object-fit:cover; border-radius:6px;">
+            <form method="POST" action="{{ url_for('page_admin_activity_delete_image', tag_id=tag.id) }}"
+                  onsubmit="return confirm('この画像を削除しますか？')">
+              <input type="hidden" name="img_url" value="{{ img_url }}">
+              <button type="submit" class="btn btn-danger btn-sm" style="margin-top:4px;">削除</button>
+            </form>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <p class="no-files-msg">画像はまだありません</p>
+        {% endif %}
+
+        <form method="POST" action="{{ url_for('page_admin_activity_upload_image', tag_id=tag.id) }}"
+              enctype="multipart/form-data">
+          <input type="file" name="image" accept=".jpg,.jpeg,.png,.gif,.webp" required>
+          <button type="submit" class="btn btn-sm">画像を追加</button>
+        </form>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="admin-card rank2-card">
+    <h3>🖼️ トップページ写真（チラシ） <span class="rank-label">ランク2専用</span></h3>
+    <p class="card-desc">トップページ上部で自動的に切り替わる写真です。何枚でも追加・削除できます。</p>
+
+    {% set imgs = page_hero_photos.images if page_hero_photos else [] %}
+    {% if imgs %}
+    <div style="display:flex; flex-wrap:wrap; gap:10px; margin:8px 0;">
+      {% for photo in imgs %}
+      <div style="text-align:center;">
+        <img src="{{ photo.url }}" style="width:140px; height:100px; object-fit:cover; border-radius:6px;">
+        <p style="font-size:0.8rem; color:#666; margin:4px 0;">{{ photo.alt }}</p>
+        <form method="POST" action="{{ url_for('page_admin_hero_delete') }}"
+              onsubmit="return confirm('この写真を削除しますか？')">
+          <input type="hidden" name="img_url" value="{{ photo.url }}">
+          <button type="submit" class="btn btn-danger btn-sm">削除</button>
+        </form>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="no-files-msg">写真はまだありません</p>
+    {% endif %}
+
+    <form method="POST" action="{{ url_for('page_admin_hero_upload') }}" enctype="multipart/form-data">
+      <div class="form-row">
+        <div class="form-group">
+          <label>写真の名前（任意）</label>
+          <input type="text" name="alt" placeholder="例：秋祭りチラシ">
+        </div>
+        <div class="form-group form-grow">
+          <label>画像ファイル</label>
+          <input type="file" name="image" accept=".jpg,.jpeg,.png,.gif,.webp" required>
+        </div>
+      </div>
+      <button type="submit" class="btn btn-sm">写真を追加</button>
+    </form>
+    <small style="color:#888; display:block; margin-top:4px;">
+      ※ アップロード直後は表示されないことがあります。その場合は数秒待ってページを再読み込みしてください。
+    </small>
+  </div>
+
   <!-- 協議員ユーザー管理 -->
   <div class="admin-card rank2-card">
     <h3>👥 協議員ユーザー管理 <span class="rank-label">ランク2専用</span></h3>
@@ -292,6 +378,8 @@
       <p class="no-files-msg">👤 ページ管理者がまだ登録されていません</p>
     {% endif %}
   </div>
+
+  <!-- ランク2パスワード変更 -->
 
   <!-- ランク1管理者管理 -->
   <div class="admin-card rank2-card">
