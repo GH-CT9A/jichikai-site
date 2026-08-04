@@ -118,7 +118,7 @@
             <span class="mbadge {{ 'mbadge-on' if meta.get('print', false) else 'mbadge-off' }}">{{ '印刷可' if meta.get('print', false) else '印刷不可' }}</span>
           </span>
           <a href="{{ url_for('kyogiin_view_file', file_type='shiryo', filename=fname) }}"
-             target="_blank" class="btn btn-view btn-sm">表示</a>
+             class="btn btn-view btn-sm">表示</a>
           <form method="POST" action="{{ url_for('admin_dashboard') }}" style="display:inline"
                 onsubmit="return confirm('削除しますか？')">
             <input type="hidden" name="action" value="delete_shiryo">
@@ -150,7 +150,7 @@
             <span class="mbadge mbadge-off">印刷不可</span>
           </span>
           <a href="{{ url_for('kyogiin_view_file', file_type='gijiroku', filename=fname) }}"
-             target="_blank" class="btn btn-view btn-sm">表示</a>
+             class="btn btn-view btn-sm">表示</a>
           <form method="POST" action="{{ url_for('admin_dashboard') }}" style="display:inline"
                 onsubmit="return confirm('削除しますか？')">
             <input type="hidden" name="action" value="delete_gijiroku">
