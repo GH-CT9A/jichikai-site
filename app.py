@@ -998,7 +998,30 @@ def event_chiiki():
 @app.route("/ping")
 def ping(): return "pong", 200
 
+@app.route("/sitemap.xml")
+def sitemap():
+    from flask import Response
+    base = "https://jichikai-site-surx.onrender.com"
+    urls = [f"{base}/"] + [f"{base}/activity/{t['id']}" for t in ACTIVITY_TAGS]
+    xml = '<?xml version="1.0" encoding="UTF-8"?>\n'
+    xml += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+    for u in urls:
+        xml += f"  <url><loc>{u}</loc></url>\n"
+    xml += "</urlset>"
+    return Response(xml, mimetype="application/xml")
 
+@app.route("/robots.txt")
+def robots():
+    from flask import Response
+    lines = [
+        "User-agent: *",
+        "Disallow: /kyogiin",
+        "Disallow: /admin",
+        "Disallow: /page_admin",
+        "Disallow: /opslog",
+        f"Sitemap: https://jichikai-site-surx.onrender.com/sitemap.xml",
+    ]
+    return Response("\n".join(lines), mimetype="text/plain")
 
 if __name__ == "__main__":
     app.run(debug=True, host="0.0.0.0", port=5000)
