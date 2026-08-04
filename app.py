@@ -36,6 +36,11 @@ def auto_logout_on_leave():
     path = request.path
     if path.startswith("/static") or path == "/ping" or path == "/favicon.ico" or path.startswith("/.well-known"):
         return
+    # ブラウザが実際にページを移動した時（アドレスバー入力・リンク遷移・戻る操作など）以外の
+    # 裏側の補助的な通信では、ログイン状態の判定を行わない
+    fetch_mode = request.headers.get("Sec-Fetch-Mode")
+    if fetch_mode is not None and fetch_mode != "navigate":
+        return
 
     if session.get("kyogiin_logged_in"):
         if not any(path.startswith(p) for p in KYOGIIN_PREFIXES):
