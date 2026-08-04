@@ -466,8 +466,8 @@ def admin_login():
         password = request.form.get("password", "").strip()
         if check_password_hash(cfg["admin2_password_hash"], password):
             session["admin_rank"] = 2
-            session["admin_name"] = "上位管理者"
-            log_action("管理者", "上位管理者", "ログイン")
+            session["admin_name"] = "管理者"
+            log_action("管理者", "管理者", "ログイン")
             return redirect(url_for("admin_dashboard"))
         error = "パスワードが違います"
     return render_template("admin_login.html", company=JICHIKAI, error=error)

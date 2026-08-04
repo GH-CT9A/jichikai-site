@@ -6,7 +6,7 @@
     <div>
       <h2>⚙️ 管理ダッシュボード</h2>
       <p class="rank-badge {% if admin_rank == 2 %}rank2-badge{% else %}rank1-badge{% endif %}">
-        {% if admin_rank == 2 %}🔐 ランク2（上位管理者）{% else %}🔑 ランク1（一般管理者）：{{ admin_name }}{% endif %}
+        🔑 管理者：{{ admin_name }}
       </p>
     </div>
     <div class="kyogiin-header-btns">
@@ -32,7 +32,7 @@
     <div class="alert alert-{{ msg[0] }}">{{ msg[1] }}</div>
   {% endif %}
 
-  <!-- ══════ ランク1・2共通 ══════ -->
+  <!-- ══════ 共通 ══════ -->
 
   <!-- 資料アップロード -->
   <div class="admin-card">
@@ -166,12 +166,12 @@
     {% endif %}
   </div>
 
-  <!-- ══════ ランク2専用 ══════ -->
+  <!-- ══════ 追加機能 ══════ -->
   {% if admin_rank == 2 %}
 
   <!-- 活動タグ画像・トップ写真管理（ページ管理者と同じ機能） -->
   <div class="admin-card rank2-card">
-    <h3>📄 活動タグ詳細ページ <span class="rank-label">ランク2専用</span></h3>
+    <h3>📄 活動タグ詳細ページ </h3>
     <p class="card-desc">各タグの本文・画像を編集できます。</p>
     {% for tag in activity_tags %}
     <div class="month-section">
@@ -215,7 +215,7 @@
   </div>
 
   <div class="admin-card rank2-card">
-    <h3>🖼️ トップページ写真（チラシ） <span class="rank-label">ランク2専用</span></h3>
+    <h3>🖼️ トップページ写真（チラシ） </h3>
     <p class="card-desc">トップページ上部で自動的に切り替わる写真です。何枚でも追加・削除できます。</p>
 
     {% set imgs = page_hero_photos.images if page_hero_photos else [] %}
@@ -257,7 +257,7 @@
 
   <!-- 協議員ユーザー管理 -->
   <div class="admin-card rank2-card">
-    <h3>👥 協議員ユーザー管理 <span class="rank-label">ランク2専用</span></h3>
+    <h3>👥 協議員ユーザー管理 </h3>
     <div class="add-user-form">
       <h4>新規協議員追加</h4>
       <form method="POST" action="{{ url_for('admin_dashboard') }}">
@@ -323,7 +323,7 @@
 
   <!-- ページ管理者ユーザー管理 -->
   <div class="admin-card rank2-card">
-    <h3>🛠️ ページ管理者管理 <span class="rank-label">ランク2専用</span></h3>
+    <h3>🛠️ ページ管理者管理 </h3>
     <p class="card-desc">協議員会専用ページ最下部の「ページ管理者」からログインできる人を管理します。</p>
     <div class="add-user-form">
       <h4>新規ページ管理者追加</h4>
@@ -379,13 +379,12 @@
     {% endif %}
   </div>
 
-  <!-- ランク2パスワード変更 -->
-
-  <!-- ランク1管理者管理 -->
+  
+  <!-- 管理者管理 -->
   <div class="admin-card rank2-card">
-    <h3>🔑 ランク1管理者管理 <span class="rank-label">ランク2専用</span></h3>
+    <h3>🔑 管理者管理</h3>
     <div class="add-user-form">
-      <h4>新規ランク1管理者追加</h4>
+      <h4>新規管理者追加</h4>
       <form method="POST" action="{{ url_for('admin_dashboard') }}">
         <input type="hidden" name="action" value="add_admin1">
         <div class="form-row">
@@ -405,7 +404,7 @@
         <button type="submit" class="btn">追加する</button>
       </form>
     </div>
-    <h4 style="margin-top:20px;">ランク1管理者一覧（{{ admin1_users|length }}人）</h4>
+    <h4 style="margin-top:20px;">管理者一覧（{{ admin1_users|length }}人）</h4>
     {% if admin1_users %}
     <div class="user-table-wrap">
       <table class="user-table">
@@ -434,13 +433,13 @@
       </table>
     </div>
     {% else %}
-      <p class="no-files-msg">👤 ランク1管理者がまだ登録されていません</p>
+      <p class="no-files-msg">👤 管理者がまだ登録されていません</p>
     {% endif %}
   </div>
-
-  <!-- ランク2パスワード変更 -->
+  
+  <!-- 管理者ログインパスワード変更 -->
   <div class="admin-card rank2-card">
-    <h3>🛡️ ランク2パスワード変更 <span class="rank-label">ランク2専用</span></h3>
+    <h3>🛡️ 管理者ログインパスワード変更</h3>
     <form method="POST" action="{{ url_for('admin_dashboard') }}">
       <input type="hidden" name="action" value="change_admin2_pw">
       <div class="form-group">
@@ -461,7 +460,7 @@
 
   <!-- 操作履歴パスワード変更 -->
   <div class="admin-card rank2-card">
-    <h3>📊 操作履歴パスワード変更 <span class="rank-label">ランク2専用</span></h3>
+    <h3>📊 操作履歴パスワード変更</h3>
     <form method="POST" action="{{ url_for('admin_dashboard') }}">
       <input type="hidden" name="action" value="change_access_log_pw">
       <div class="form-group">
