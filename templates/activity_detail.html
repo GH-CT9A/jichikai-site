@@ -10,8 +10,8 @@
   {% endif %}
 
   {% if content.images %}
-    {% for img_url in content.images %}
-      <img src="{{ img_url }}" alt="{{ content.title }}" style="width: 100%; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); margin-bottom: 20px;">
+    {% for img in content.images %}
+      <img src="{{ img.url }}" alt="{{ img.name or content.title }}" style="width: 100%; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); margin-bottom: 20px;">
     {% endfor %}
   {% else %}
     <p style="color: #888;">現在、画像は準備中です。</p>

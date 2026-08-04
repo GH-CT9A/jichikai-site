@@ -716,7 +716,7 @@ def default_activity_content(tag_id, title):
     images = []
     if tag_id == "event":
         # 既存の地域イベントページの画像をそのまま初期値として維持
-        images = [url_for("static", filename="images/月の観察会.png")]
+        images = [{"url": url_for("static", filename="images/月の観察会.png"), "name": "月の観察会.png"}]
     return {"title": title, "body": "", "images": images}
 
 @app.route("/activity/<tag_id>")
@@ -848,11 +848,11 @@ def page_admin_activity_upload_image(tag_id):
                 resource_type="image",
                 overwrite=True
             )
-            content.setdefault("images", []).append(result["secure_url"])
+            content.setdefault("images", []).append({"url": result["secure_url"], "name": file.filename})
             cloud_json_save(f"activity_{tag_id}", content)
 
             role, name = _page_editor_actor()
-            log_action(role, name, "活動タグ画像追加", tag_title)
+            log_action(role, name, "活動タグ画像追加", f"{tag_title}: {file.filename}")
 
     return _page_editor_redirect()
 
@@ -866,11 +866,12 @@ def page_admin_activity_delete_image(tag_id):
     img_url = request.form.get("img_url", "")
     tag_title = next(t["title"] for t in ACTIVITY_TAGS if t["id"] == tag_id)
     content = cloud_json_load(f"activity_{tag_id}", default_activity_content(tag_id, tag_title))
-    content["images"] = [u for u in content.get("images", []) if u != img_url]
+    deleted_name = next((i.get("name", "") for i in content.get("images", []) if i.get("url") == img_url), "")
+    content["images"] = [i for i in content.get("images", []) if i.get("url") != img_url]
     cloud_json_save(f"activity_{tag_id}", content)
 
     role, name = _page_editor_actor()
-    log_action(role, name, "活動タグ画像削除", tag_title)
+    log_action(role, name, "活動タグ画像削除", f"{tag_title}: {deleted_name}")
     return _page_editor_redirect()
 
 @app.route("/page_admin/hero/upload", methods=["POST"])
@@ -908,11 +909,12 @@ def page_admin_hero_delete():
     
     img_url = request.form.get("img_url", "")
     hero_photos = cloud_json_load("hero_photos", default_hero_photos())
+    deleted_alt = next((p.get("alt", "") for p in hero_photos.get("images", []) if p.get("url") == img_url), "")
     hero_photos["images"] = [p for p in hero_photos.get("images", []) if p.get("url") != img_url]
     cloud_json_save("hero_photos", hero_photos)
 
     role, name = _page_editor_actor()
-    log_action(role, name, "トップ写真削除")
+    log_action(role, name, "トップ写真削除", deleted_alt)
     return _page_editor_redirect()
 
 # --- 操作履歴（アイコン・リンクは一切設置しない。URLを直接開いてアクセスする） ------

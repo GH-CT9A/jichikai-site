@@ -29,18 +29,18 @@
         {% set imgs = tag_contents[tag.id].images if tag.id in tag_contents else [] %}
         {% if imgs %}
         <div style="display:flex; flex-wrap:wrap; gap:10px; margin:8px 0;">
-          {% for img_url in imgs %}
+          {% for img in imgs %}
           <div style="text-align:center;">
-            <img src="{{ img_url }}" style="width:120px; height:90px; object-fit:cover; border-radius:6px;">
+            <img src="{{ img.url }}" style="width:120px; height:90px; object-fit:cover; border-radius:6px;">
+            <p style="font-size:0.75rem; color:#666; margin:4px 0; max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ img.name }}</p>
             <form method="POST" action="{{ url_for('page_admin_activity_delete_image', tag_id=tag.id) }}"
                   onsubmit="return confirm('この画像を削除しますか？')">
-              <input type="hidden" name="img_url" value="{{ img_url }}">
+              <input type="hidden" name="img_url" value="{{ img.url }}">
               <button type="submit" class="btn btn-danger btn-sm" style="margin-top:4px;">削除</button>
             </form>
           </div>
           {% endfor %}
         </div>
-        {% else %}
         <p class="no-files-msg">画像はまだありません</p>
         {% endif %}
 
