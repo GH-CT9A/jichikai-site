@@ -905,8 +905,6 @@ def page_admin_hero_delete():
     log_action(role, name, "トップ写真削除")
     return _page_editor_redirect()
 
-@app.route('/event/chiiki')
-
 # --- 操作履歴（アイコン・リンクは一切設置しない。URLを直接開いてアクセスする） ------
 @app.route("/opslog/login", methods=["GET", "POST"])
 def opslog_login():
@@ -980,6 +978,7 @@ def opslog_download_csv():
         mimetype="text/csv"
     )
 
+@app.route('/event/chiiki')
 def event_chiiki():
     # 旧URL: 新しい汎用ページへリダイレクト（既存のブックマーク・リンク対策）
     return redirect(url_for("activity_detail", tag_id="event"))
