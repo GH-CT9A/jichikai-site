@@ -189,10 +189,10 @@
     // ── 透かしテキスト ────────────────────────────────────
     function makeWatermarkText() {
       var now = new Date();
-      return USER_NAME + " " +
-             now.getFullYear() + "/" +
+      var dateStr = now.getFullYear() + "/" +
              String(now.getMonth() + 1).padStart(2, "0") + "/" +
              String(now.getDate()).padStart(2, "0");
+      return USER_NAME ? (USER_NAME + " " + dateStr) : dateStr;
     }
 
     // ── canvasに透かし描画 ────────────────────────────────

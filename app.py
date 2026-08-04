@@ -369,6 +369,16 @@ def kyogiin_view_file(file_type, filename):
         log_action("協議員", session.get("kyogiin_name", ""), "閲覧", f"{file_type}: {get_display_name(safe)}")
     elif admin_rank() >= 1:
         log_action("管理者", session.get("admin_name", ""), "閲覧", f"{file_type}: {get_display_name(safe)}")
+
+    # 透かしに表示する名前: 協議員はご自身の名前、ランク1管理者もご自身の名前、
+    # ランク2管理者は名前を持たないため空欄（＝日付のみ表示）とする
+    if session.get("kyogiin_logged_in"):
+        viewer_name = session.get("kyogiin_name", "")
+    elif admin_rank() == 1:
+        viewer_name = session.get("admin_name", "")
+    else:
+        viewer_name = ""
+
     cfg = load_config()
     meta = get_file_meta(cfg, safe) if file_type == "shiryo" else {"watermark": True, "download": False, "print": False}
     ext = safe.rsplit(".", 1)[-1].lower() if "." in safe else ""
@@ -383,6 +393,7 @@ def kyogiin_view_file(file_type, filename):
         company=JICHIKAI,
         filename=safe,
         display_name=get_display_name(safe),
+        user_name=viewer_name,
         user_name=session.get("kyogiin_name", ""),
         file_url=file_url,
         file_url_abs=request.host_url.rstrip("/") + file_url,
