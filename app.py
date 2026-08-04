@@ -394,7 +394,6 @@ def kyogiin_view_file(file_type, filename):
         filename=safe,
         display_name=get_display_name(safe),
         user_name=viewer_name,
-        user_name=session.get("kyogiin_name", ""),
         file_url=file_url,
         file_url_abs=request.host_url.rstrip("/") + file_url,
         file_ext=ext,
