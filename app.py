@@ -291,10 +291,14 @@ def default_hero_photos():
         ]
     }
 
+def default_news_items():
+    return {"entries": []}
+
 @app.route("/")
 def index():
     hero_photos = cloud_json_load("hero_photos", default_hero_photos())
-    return render_template("index.html", company=JICHIKAI, hero_photos=hero_photos)
+    news_items = cloud_json_load("news_items", default_news_items())
+    return render_template("index.html", company=JICHIKAI, hero_photos=hero_photos, news_items=news_items)
 
 @app.route("/kyogiin", methods=["GET", "POST"])
 def kyogiin():
@@ -483,14 +487,17 @@ def admin_dashboard():
     if admin_rank() < 1: return redirect(url_for("admin_login"))
     cfg = load_config()
     msg = None
+
     page_tag_contents = {}
     page_hero_photos = {}
+    page_news_items = {"entries": []}
     if admin_rank() == 2:
         for t in ACTIVITY_TAGS:
             page_tag_contents[t["id"]] = cloud_json_load(
                 f"activity_{t['id']}", default_activity_content(t["id"], t["title"])
             )
         page_hero_photos = cloud_json_load("hero_photos", default_hero_photos())
+        page_news_items = cloud_json_load("news_items", default_news_items())
 
     if request.method == "POST":
         action = request.form.get("action")
@@ -683,6 +690,7 @@ def admin_dashboard():
         activity_tags=ACTIVITY_TAGS,
         page_tag_contents=page_tag_contents,
         page_hero_photos=page_hero_photos,
+        news_items=page_news_items,
     )
 
 @app.route("/admin/download_config")
@@ -799,12 +807,14 @@ def page_admin_dashboard():
             f"activity_{t['id']}", default_activity_content(t["id"], t["title"])
         )
     hero_photos = cloud_json_load("hero_photos", default_hero_photos())
+    news_items = cloud_json_load("news_items", default_news_items())
     return render_template(
         "page_admin_dashboard.html",
         company=JICHIKAI,
         activity_tags=ACTIVITY_TAGS,
         tag_contents=tag_contents,
         hero_photos=hero_photos,
+        news_items=news_items,
     )
 
 # -------------------------------------------------------------------------------
@@ -915,6 +925,48 @@ def page_admin_hero_delete():
 
     role, name = _page_editor_actor()
     log_action(role, name, "トップ写真削除", deleted_alt)
+    return _page_editor_redirect()
+
+@app.route("/page_admin/news/add", methods=["POST"])
+def page_admin_news_add():
+    if not session.get("page_admin_logged_in") and admin_rank() < 2:
+        return redirect(url_for("page_admin_login"))
+
+    title = request.form.get("title", "").strip()
+    body = request.form.get("body", "").strip()
+    if title:
+        import datetime, time
+        news = cloud_json_load("news_items", default_news_items())
+        entry = {
+            "id": str(int(time.time() * 1000)),
+            "date": (datetime.datetime.utcnow() + datetime.timedelta(hours=9)).strftime("%Y-%m-%d"),
+            "title": title,
+            "body": body,
+        }
+        entries = news.get("entries", [])
+        entries.insert(0, entry)
+        entries = entries[:50]
+        news["entries"] = entries
+        cloud_json_save("news_items", news)
+
+        role, name = _page_editor_actor()
+        log_action(role, name, "新着情報追加", title)
+
+    return _page_editor_redirect()
+
+@app.route("/page_admin/news/delete", methods=["POST"])
+def page_admin_news_delete():
+    if not session.get("page_admin_logged_in") and admin_rank() < 2:
+        return redirect(url_for("page_admin_login"))
+
+    entry_id = request.form.get("entry_id", "")
+    news = cloud_json_load("news_items", default_news_items())
+    deleted_title = next((e.get("title", "") for e in news.get("entries", []) if e.get("id") == entry_id), "")
+    news["entries"] = [e for e in news.get("entries", []) if e.get("id") != entry_id]
+    cloud_json_save("news_items", news)
+
+    role, name = _page_editor_actor()
+    log_action(role, name, "新着情報削除", deleted_title)
     return _page_editor_redirect()
 
 # --- 操作履歴（アイコン・リンクは一切設置しない。URLを直接開いてアクセスする） ------

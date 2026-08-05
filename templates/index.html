@@ -14,6 +14,23 @@
   <a href="#contact" class="btn">お問い合わせはこちら</a>
 </section>
 
+<section id="news">
+  <h2>📢 新着情報</h2>
+  {% if news_items.entries %}
+  <ul class="news-list">
+    {% for item in news_items.entries[:10] %}
+    <li class="news-item">
+      <span class="news-date">{{ item.date }}</span>
+      <span class="news-title">{{ item.title }}</span>
+      {% if item.body %}<p class="news-body">{{ item.body }}</p>{% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="no-files-msg">新着情報はまだありません</p>
+  {% endif %}
+</section>
+
 <section id="about">
   <h2>自治会概要</h2>
   <table>
