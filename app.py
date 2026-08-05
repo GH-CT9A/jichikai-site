@@ -26,7 +26,7 @@ PAGE_ADMIN_PREFIXES = ("/page_admin",)
 OPSLOG_PREFIXES     = ("/opslog",)
 # ランク2管理者がページ画像編集フォーム（ページ管理者と共通のルート）を使う際に
 # 自動ログアウトの対象から外すためのURL
-PAGE_EDIT_SHARED_PREFIXES = ("/page_admin/activity", "/page_admin/hero")
+PAGE_EDIT_SHARED_PREFIXES = ("/page_admin/activity", "/page_admin/hero", "/page_admin/news")
 # 管理者が資料・議事録の「表示」ボタンを押した時にも管理者セッションを維持する
 FILE_VIEW_SHARED_PREFIXES = ("/kyogiin/view", "/kyogiin/raw")
 ADMIN_SAFE_PREFIXES = ADMIN_PREFIXES + PAGE_EDIT_SHARED_PREFIXES + FILE_VIEW_SHARED_PREFIXES
