@@ -214,7 +214,7 @@
   <!-- 活動タグ画像・トップ写真管理（ページ管理者と同じ機能） -->
   <div class="admin-card rank2-card">
     <h3>📄 活動タグ詳細ページ</h3>
-    
+
     <p class="card-desc">各タグの本文・画像を編集できます。</p>
     {% for tag in activity_tags %}
     <div class="month-section">
@@ -461,12 +461,14 @@
             <td><span class="badge {{ 'badge-active' if info.get('active', true) else 'badge-inactive' }}">{{ '有効' if info.get('active', true) else '無効' }}</span></td>
             <td>
               <form method="POST" action="{{ url_for('admin_dashboard') }}" style="display:inline">
+                <input type="hidden" name="origin" value="admin">
                 <input type="hidden" name="action" value="toggle_admin1">
                 <input type="hidden" name="user_name" value="{{ name }}">
                 <button class="btn btn-sm {{ 'btn-warning' if info.get('active', true) else 'btn-success' }}">{{ '無効化' if info.get('active', true) else '有効化' }}</button>
               </form>
               <form method="POST" action="{{ url_for('admin_dashboard') }}" style="display:inline"
                     onsubmit="return confirm('「{{ name }}」を削除しますか？')">
+                <input type="hidden" name="origin" value="admin">
                 <input type="hidden" name="action" value="delete_admin1">
                 <input type="hidden" name="user_name" value="{{ name }}">
                 <button class="btn btn-danger btn-sm">削除</button>
@@ -507,6 +509,7 @@
   <div class="admin-card rank2-card">
     <h3>📊 操作履歴パスワード変更</h3>
     <form method="POST" action="{{ url_for('admin_dashboard') }}">
+      <input type="hidden" name="origin" value="admin">
       <input type="hidden" name="action" value="change_access_log_pw">
       <div class="form-group">
         <label>現在のパスワード</label>

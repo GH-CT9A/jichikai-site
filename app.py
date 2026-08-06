@@ -787,14 +787,16 @@ def page_admin_change_password():
     return render_template("page_admin_change_password.html", company=JICHIKAI, user_name=user_name, msg=msg)
 
 def _page_editor_actor():
-    """ページ画像編集ルートの操作者を判定する（ページ管理者 or 管理者）"""
-    if session.get("page_admin_logged_in"):
+    """ページ画像編集ルートの操作者を判定する（フォームのorigin値で明示的に区別）"""
+    origin = request.form.get("origin", "")
+    if origin == "page_admin":
         return "ページ管理者", session.get("page_admin_name", "")
     return "管理者", session.get("admin_name", "")
 
 def _page_editor_redirect():
-    """画像編集後の戻り先: ページ管理者ならページ管理画面へ、ランク2管理者なら管理ダッシュボードへ"""
-    if session.get("page_admin_logged_in"):
+    """画像編集後の戻り先: フォームのorigin値に基づいて判定する"""
+    origin = request.form.get("origin", "")
+    if origin == "page_admin":
         return redirect(url_for("page_admin_dashboard"))
     return redirect(url_for("admin_dashboard"))
 

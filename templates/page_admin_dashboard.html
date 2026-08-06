@@ -15,6 +15,7 @@
     <p class="card-desc">ホームページに表示される新着情報です。最新10件がトップページに表示されます。</p>
 
     <form method="POST" action="{{ url_for('page_admin_news_add') }}">
+      <input type="hidden" name="origin" value="page_admin">
       <div class="form-group">
         <label>タイトル</label>
         <input type="text" name="title" placeholder="例：夏祭りのお知らせ" required>
@@ -38,6 +39,7 @@
             <td>
               <form method="POST" action="{{ url_for('page_admin_news_delete') }}"
                     onsubmit="return confirm('「{{ item.title }}」を削除しますか？')">
+                <input type="hidden" name="origin" value="page_admin">
                 <input type="hidden" name="entry_id" value="{{ item.id }}">
                 <button type="submit" class="btn btn-danger btn-sm">削除</button>
               </form>
@@ -59,6 +61,7 @@
     <div class="month-section">
       <h5>{{ tag.title }}</h5>
       <form method="POST" action="{{ url_for('page_admin_activity_save', tag_id=tag.id) }}">
+        <input type="hidden" name="origin" value="page_admin">
         <div class="form-group">
           <label>本文</label>
           <textarea name="body" rows="4" style="width:100%;">{{ (tag_contents[tag.id].body) if tag.id in tag_contents else '' }}</textarea>
@@ -77,17 +80,20 @@
             <p style="font-size:0.75rem; color:#666; margin:4px 0; max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ img.name }}</p>
             <form method="POST" action="{{ url_for('page_admin_activity_delete_image', tag_id=tag.id) }}"
                   onsubmit="return confirm('この画像を削除しますか？')">
+              <input type="hidden" name="origin" value="page_admin">
               <input type="hidden" name="img_url" value="{{ img.url }}">
               <button type="submit" class="btn btn-danger btn-sm" style="margin-top:4px;">削除</button>
             </form>
           </div>
           {% endfor %}
         </div>
+        {% else %}
         <p class="no-files-msg">画像はまだありません</p>
         {% endif %}
 
         <form method="POST" action="{{ url_for('page_admin_activity_upload_image', tag_id=tag.id) }}"
               enctype="multipart/form-data">
+          <input type="hidden" name="origin" value="page_admin">
           <input type="file" name="image" accept=".jpg,.jpeg,.png,.gif,.webp" required>
           <button type="submit" class="btn btn-sm">画像を追加</button>
         </form>
@@ -112,6 +118,7 @@
         <p style="font-size:0.8rem; color:#666; margin:4px 0;">{{ photo.alt }}</p>
         <form method="POST" action="{{ url_for('page_admin_hero_delete') }}"
               onsubmit="return confirm('この写真を削除しますか？')">
+          <input type="hidden" name="origin" value="page_admin">
           <input type="hidden" name="img_url" value="{{ photo.url }}">
           <button type="submit" class="btn btn-danger btn-sm">削除</button>
         </form>
@@ -123,6 +130,7 @@
     {% endif %}
 
     <form method="POST" action="{{ url_for('page_admin_hero_upload') }}" enctype="multipart/form-data">
+      <input type="hidden" name="origin" value="page_admin">
       <div class="form-row">
         <div class="form-group">
           <label>写真の名前（任意）</label>
