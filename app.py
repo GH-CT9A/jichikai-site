@@ -66,7 +66,9 @@ def cloud_json_load(name, default):
     """Cloudinaryのrawリソースからjsonを読み込む。存在しなければdefaultを返す。"""
     cloud_name = os.environ.get("CLOUDINARY_CLOUD_NAME", "dyhtmmqnk")
     public_id = f"{JSON_CONFIG_FOLDER}/{name}"
-    url = f"https://res.cloudinary.com/{cloud_name}/raw/upload/{public_id}.json"
+    import time
+    cache_buster = int(time.time() * 1000)  # 毎回変化させ、キャッシュを回避する
+    url = f"https://res.cloudinary.com/{cloud_name}/raw/upload/{public_id}.json?_cb={cache_buster}"
     try:
         import urllib.request
         with urllib.request.urlopen(url, timeout=5) as resp:

@@ -471,7 +471,8 @@ footer {
 .footer-sep { color: rgba(255,255,255,.4); font-size: .85rem; }
 
 .news-list { list-style: none; padding: 0; max-width: 800px; margin: 0 auto; }
-.news-item { border-bottom: 1px solid #e0e0e0; padding: 12px 0; }
-.news-date { color: #888; font-size: 0.85rem; margin-right: 12px; }
+.news-item { display: flex; align-items: flex-start; gap: 12px; border-bottom: 1px solid #e0e0e0; padding: 12px 0; }
+.news-date { color: #888; font-size: 0.85rem; flex-shrink: 0; padding-top: 2px; }
+.news-content { flex: 1; }
 .news-title { font-weight: bold; }
 .news-body { margin: 6px 0 0 0; color: #555; font-size: 0.9rem; white-space: pre-wrap; }

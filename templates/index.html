@@ -21,8 +21,10 @@
     {% for item in news_items.entries[:10] %}
     <li class="news-item">
       <span class="news-date">{{ item.date }}</span>
-      <span class="news-title">{{ item.title }}</span>
-      {% if item.body %}<p class="news-body">{{ item.body }}</p>{% endif %}
+      <div class="news-content">
+        <span class="news-title">{{ item.title }}</span>
+        {% if item.body %}<p class="news-body">{{ item.body }}</p>{% endif %}
+      </div>
     </li>
     {% endfor %}
   </ul>
