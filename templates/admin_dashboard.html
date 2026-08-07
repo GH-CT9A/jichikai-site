@@ -219,8 +219,8 @@
 
     <p class="card-desc">各タグの本文・画像を編集できます。</p>
     {% for tag in activity_tags %}
-    <div class="month-section">
-      <h5>{{ tag.title }}</h5>
+    <div class="tag-section">
+      <h4 class="tag-section-title">{{ tag.icon }} {{ tag.title }}</h4>
       <form method="POST" action="{{ url_for('page_admin_activity_save', tag_id=tag.id) }}">
         <div class="form-group">
           <label>本文</label>

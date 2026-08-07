@@ -58,8 +58,8 @@
     <h3>📄 活動タグ詳細ページ</h3>
     <p class="card-desc">各タグの本文を編集できます（画像の管理は次のステップで追加予定）。</p>
     {% for tag in activity_tags %}
-    <div class="month-section">
-      <h5>{{ tag.title }}</h5>
+    <div class="tag-section">
+      <h4 class="tag-section-title">{{ tag.icon }} {{ tag.title }}</h4>
       <form method="POST" action="{{ url_for('page_admin_activity_save', tag_id=tag.id) }}">
         <input type="hidden" name="origin" value="page_admin">
         <div class="form-group">

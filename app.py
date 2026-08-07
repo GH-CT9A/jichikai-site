@@ -237,7 +237,20 @@ JICHIKAI = {
 # 4月開始、3月終了に変更
 MONTHS = ["4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月", "1月", "2月", "3月"]
 
+_FILE_LIST_CACHE = {}
+_FILE_LIST_CACHE_TTL_SECONDS = 15
+
+def invalidate_file_list_cache(folder_type):
+    """資料/議事録アップロード・削除の直後に呼び、一覧キャッシュを即座に無効化する"""
+    _FILE_LIST_CACHE.pop(folder_type, None)
+
 def get_files_by_month(folder_type):
+    import time
+    now = time.time()
+    cached = _FILE_LIST_CACHE.get(folder_type)
+    if cached is not None and (now - cached[0]) < _FILE_LIST_CACHE_TTL_SECONDS:
+        return cached[1]
+
     result = {m: [] for m in MONTHS}
     prefix = f"jichikai/{folder_type}/"
 
@@ -264,6 +277,8 @@ def get_files_by_month(folder_type):
                             result[month_key].append(fname)
         except Exception as e:
             print(f"Cloudinary list error ({folder_type}, {r_type}): {e}")
+
+    _FILE_LIST_CACHE[folder_type] = (now, result)
     return result
 
 def get_cloudinary_url(folder_type, fname):
@@ -580,6 +595,7 @@ def admin_dashboard():
                         "print":     allow_print
                     }
                     save_config(cfg)
+                    invalidate_file_list_cache("shiryo")
                     msg = ("success", f"{month}に資料「{original_filename}」をアップロードしました")
                     log_action("管理者", session.get("admin_name", ""), "資料アップロード", f"{month}: {original_filename}")
                 except Exception as e:
@@ -606,6 +622,7 @@ def admin_dashboard():
                         unique_filename=False,
                         overwrite=True
                     )
+                    invalidate_file_list_cache("gijiroku")
                     msg = ("success", f"{month}に議事録「{original_filename}」をアップロードしました")
                     log_action("管理者", session.get("admin_name", ""), "議事録アップロード", f"{month}: {original_filename}")
                 except Exception as e:
@@ -620,6 +637,7 @@ def admin_dashboard():
                 cloudinary.uploader.destroy(f"jichikai/shiryo/{base}", resource_type=r_type)
                 cfg.get("file_meta", {}).pop(fname, None)
                 save_config(cfg)
+                invalidate_file_list_cache("shiryo")
                 msg = ("success", f"「{get_display_name(fname)}」を削除しました")
                 log_action("管理者", session.get("admin_name", ""), "資料削除", get_display_name(fname))
             except Exception as e:
@@ -631,6 +649,7 @@ def admin_dashboard():
             try:
                 cloudinary.uploader.destroy(f"jichikai/gijiroku/{base}", resource_type="image")
                 save_config(cfg)
+                invalidate_file_list_cache("gijiroku")
                 msg = ("success", f"「{get_display_name(fname)}」を削除しました")
                 log_action("管理者", session.get("admin_name", ""), "議事録削除", get_display_name(fname))
             except Exception as e:
@@ -752,12 +771,12 @@ def admin_upload_config():
 
 # --- 活動タグ詳細ページ（ページ管理画面から中身を差し替え可能） -----------------
 ACTIVITY_TAGS = [
-    {"id": "bohan",    "title": "地域の安全・防災"},
-    {"id": "event",    "title": "地域イベント"},
-    {"id": "saigai",   "title": "防災・災害対策"},
-    {"id": "gomi",     "title": "ごみ・環境美化"},
-    {"id": "koreisha", "title": "高齢者・福祉サポート"},
-    {"id": "joho",     "title": "情報共有・サポート"},
+    {"id": "bohan",    "title": "地域の安全・防災",     "icon": "🏘️"},
+    {"id": "event",    "title": "地域イベント",         "icon": "🌸"},
+    {"id": "saigai",   "title": "防災・災害対策",       "icon": "🚨"},
+    {"id": "gomi",     "title": "ごみ・環境美化",       "icon": "♻️"},
+    {"id": "koreisha", "title": "高齢者・福祉サポート", "icon": "👴"},
+    {"id": "joho",     "title": "情報共有・サポート",   "icon": "📢"},
 ]
 ACTIVITY_TAG_IDS = {t["id"] for t in ACTIVITY_TAGS}
 
@@ -877,6 +896,7 @@ def page_admin_activity_save(tag_id):
 
     role, name = _page_editor_actor()
     log_action(role, name, "活動タグ本文保存", tag_title)
+    flash(f"「{tag_title}」の本文を保存しました", "success")
     return _page_editor_redirect()
 
 @app.route("/page_admin/activity/<tag_id>/upload_image", methods=["POST"])
@@ -906,6 +926,9 @@ def page_admin_activity_upload_image(tag_id):
 
             role, name = _page_editor_actor()
             log_action(role, name, "活動タグ画像追加", f"{tag_title}: {file.filename}")
+            flash(f"「{tag_title}」に画像を追加しました", "success")
+        else:
+            flash("対応していない画像形式です", "danger")
 
     return _page_editor_redirect()
 
@@ -925,6 +948,7 @@ def page_admin_activity_delete_image(tag_id):
 
     role, name = _page_editor_actor()
     log_action(role, name, "活動タグ画像削除", f"{tag_title}: {deleted_name}")
+    flash(f"「{tag_title}」の画像を削除しました", "success")
     return _page_editor_redirect()
 
 @app.route("/page_admin/hero/upload", methods=["POST"])
@@ -952,6 +976,9 @@ def page_admin_hero_upload():
 
             role, name = _page_editor_actor()
             log_action(role, name, "トップ写真追加", alt_text)
+            flash("トップページの写真を追加しました", "success")
+        else:
+            flash("対応していない画像形式です", "danger")
 
     return _page_editor_redirect()
 
@@ -968,6 +995,7 @@ def page_admin_hero_delete():
 
     role, name = _page_editor_actor()
     log_action(role, name, "トップ写真削除", deleted_alt)
+    flash("トップページの写真を削除しました", "success")
     return _page_editor_redirect()
 
 @app.route("/page_admin/news/add", methods=["POST"])
