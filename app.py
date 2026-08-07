@@ -284,6 +284,28 @@ def get_file_meta(cfg, fname):
 def admin_rank():
     return session.get("admin_rank", 0)
 
+def _page_admin_authorized():
+    """
+    page_admin系ルートの権限チェック。
+    従来の `not session.get("page_admin_logged_in") and admin_rank() < 2` と
+    完全に同一の条件（否定形）。挙動は一切変更していない。
+    拒否された場合のみ、原因調査のためセッションの状態をログに出す。
+    """
+    ok = bool(session.get("page_admin_logged_in")) or admin_rank() >= 2
+    if not ok:
+        print(
+            "[page_admin_auth] denied "
+            f"path={request.path} "
+            f"page_admin_logged_in={session.get('page_admin_logged_in')!r} "
+            f"page_admin_name={session.get('page_admin_name')!r} "
+            f"admin_rank_in_session={session.get('admin_rank')!r} "
+            f"admin_name={session.get('admin_name')!r} "
+            f"session_keys={list(session.keys())} "
+            f"has_cookie_header={('Cookie' in request.headers)}",
+            flush=True,
+        )
+    return ok
+
 def default_hero_photos():
     return {
         "images": [
@@ -825,7 +847,7 @@ def page_admin_dashboard():
 
 @app.route("/page_admin/activity/<tag_id>/save", methods=["POST"])
 def page_admin_activity_save(tag_id):
-    if not session.get("page_admin_logged_in") and admin_rank() < 2:
+    if not _page_admin_authorized():
         return redirect(url_for("page_admin_login"))
     if tag_id not in ACTIVITY_TAG_IDS:
         abort(404)
@@ -842,7 +864,7 @@ def page_admin_activity_save(tag_id):
 
 @app.route("/page_admin/activity/<tag_id>/upload_image", methods=["POST"])
 def page_admin_activity_upload_image(tag_id):
-    if not session.get("page_admin_logged_in") and admin_rank() < 2:
+    if not _page_admin_authorized():
         return redirect(url_for("page_admin_login"))
     if tag_id not in ACTIVITY_TAG_IDS:
         abort(404)
@@ -872,7 +894,7 @@ def page_admin_activity_upload_image(tag_id):
 
 @app.route("/page_admin/activity/<tag_id>/delete_image", methods=["POST"])
 def page_admin_activity_delete_image(tag_id):
-    if not session.get("page_admin_logged_in") and admin_rank() < 2:
+    if not _page_admin_authorized():
         return redirect(url_for("page_admin_login"))
     if tag_id not in ACTIVITY_TAG_IDS:
         abort(404)
@@ -890,7 +912,7 @@ def page_admin_activity_delete_image(tag_id):
 
 @app.route("/page_admin/hero/upload", methods=["POST"])
 def page_admin_hero_upload():
-    if not session.get("page_admin_logged_in") and admin_rank() < 2:
+    if not _page_admin_authorized():
         return redirect(url_for("page_admin_login"))
 
     file = request.files.get("image")
@@ -918,7 +940,7 @@ def page_admin_hero_upload():
 
 @app.route("/page_admin/hero/delete", methods=["POST"])
 def page_admin_hero_delete():
-    if not session.get("page_admin_logged_in") and admin_rank() < 2:
+    if not _page_admin_authorized():
         return redirect(url_for("page_admin_login"))
     
     img_url = request.form.get("img_url", "")
@@ -933,9 +955,9 @@ def page_admin_hero_delete():
 
 @app.route("/page_admin/news/add", methods=["POST"])
 def page_admin_news_add():
-    if not session.get("page_admin_logged_in") and admin_rank() < 2:
+    if not _page_admin_authorized():
         return redirect(url_for("page_admin_login"))
-
+    
     title = request.form.get("title", "").strip()
     body = request.form.get("body", "").strip()
     if title:
@@ -960,9 +982,9 @@ def page_admin_news_add():
 
 @app.route("/page_admin/news/delete", methods=["POST"])
 def page_admin_news_delete():
-    if not session.get("page_admin_logged_in") and admin_rank() < 2:
+    if not _page_admin_authorized():
         return redirect(url_for("page_admin_login"))
-
+    
     entry_id = request.form.get("entry_id", "")
     news = cloud_json_load("news_items", default_news_items())
     deleted_title = next((e.get("title", "") for e in news.get("entries", []) if e.get("id") == entry_id), "")
