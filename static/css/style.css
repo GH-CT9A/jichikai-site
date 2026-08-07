@@ -141,11 +141,10 @@ section h2 {
 
 /* ─ 新着情報の見出しをフリッカ(明滅)させる ─ */
 @keyframes news-flicker {
-  0%, 3%, 6%, 100% { opacity: 1; }
-  4%   { opacity: .35; }
-  5%   { opacity: .85; }
+  0%, 100% { opacity: 1; }
+  50%      { opacity: .2; }
 }
-#news h2 { animation: news-flicker 4s infinite; }
+#news h2 { animation: news-flicker 3s ease-in-out infinite; }
 
 /* ─ 概要テーブル ─ */
 table { width: 100%; border-collapse: collapse; }
