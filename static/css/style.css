@@ -139,6 +139,14 @@ section h2 {
   border-bottom: 3px solid var(--green-light);
 }
 
+/* ─ 新着情報の見出しをフリッカ(明滅)させる ─ */
+@keyframes news-flicker {
+  0%, 3%, 6%, 100% { opacity: 1; }
+  4%   { opacity: .35; }
+  5%   { opacity: .85; }
+}
+#news h2 { animation: news-flicker 4s infinite; }
+
 /* ─ 概要テーブル ─ */
 table { width: 100%; border-collapse: collapse; }
 table th, table td { padding: 12px 16px; border: 1px solid var(--border); }
@@ -201,14 +209,19 @@ table th { background: var(--green-light); width: 140px; font-weight: bold; }
 .form-group { margin-bottom: 16px; text-align: left; }
 .form-group label { display: block; font-size: .85rem; font-weight: bold; margin-bottom: 6px; color: var(--muted); }
 .form-group input,
-.form-group select {
+.form-group select,
+.form-group textarea {
   width: 100%; padding: 10px 14px;
   border: 1px solid var(--border); border-radius: 6px;
   font-size: .95rem; outline: none;
   transition: border-color .2s;
+  font-family: inherit; color: inherit; background: #fff;
+  caret-color: var(--green);
 }
 .form-group input:focus,
-.form-group select:focus { border-color: var(--green); }
+.form-group select:focus,
+.form-group textarea:focus { border-color: var(--green); }
+.form-group textarea { resize: vertical; }
 
 /* ═══════════════════════════════════════════
    協議員ファイルページ

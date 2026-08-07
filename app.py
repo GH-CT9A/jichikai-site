@@ -1,6 +1,6 @@
 ﻿from flask import (
     Flask, render_template, request, session,
-    redirect, url_for, abort, send_file
+    redirect, url_for, abort, send_file, flash
 )
 import os, json, io, re
 import cloudinary
@@ -62,23 +62,38 @@ CONFIG_FILE = "config.json"
 
 JSON_CONFIG_FOLDER = "jichikai/config"
 
+# ページ内容の読み込みを高速化するための短時間キャッシュ。
+# 保存(cloud_json_save)の直後は必ずキャッシュを最新化するので、
+# 「追加・削除した直後の画面に反映されない」ということは起きない。
+# TTLを過ぎたら通常通りCloudinaryへ再取得しにいく。
+_JSON_CACHE = {}
+_JSON_CACHE_TTL_SECONDS = 15
+
 def cloud_json_load(name, default):
     """Cloudinaryのrawリソースからjsonを読み込む。存在しなければdefaultを返す。"""
+    import time
+    now = time.time()
+    cached = _JSON_CACHE.get(name)
+    if cached is not None and (now - cached[0]) < _JSON_CACHE_TTL_SECONDS:
+        return cached[1]
+
     cloud_name = os.environ.get("CLOUDINARY_CLOUD_NAME", "dyhtmmqnk")
     public_id = f"{JSON_CONFIG_FOLDER}/{name}"
-    import time
-    cache_buster = int(time.time() * 1000)  # 毎回変化させ、キャッシュを回避する
+    cache_buster = int(now * 1000)
     url = f"https://res.cloudinary.com/{cloud_name}/raw/upload/{public_id}.json?_cb={cache_buster}"
     try:
         import urllib.request
         with urllib.request.urlopen(url, timeout=5) as resp:
-            return json.loads(resp.read().decode("utf-8"))
+            data = json.loads(resp.read().decode("utf-8"))
+            _JSON_CACHE[name] = (now, data)
+            return data
     except Exception as e:
         print(f"cloud_json_load({name}) failed, using default: {e}")
         return default
 
 def cloud_json_save(name, data):
     """dictをJSON化してCloudinaryにraw保存(上書き)する。"""
+    import time
     public_id = f"{JSON_CONFIG_FOLDER}/{name}.json"
     payload = json.dumps(data, ensure_ascii=False, indent=2).encode("utf-8")
     cloudinary.uploader.upload(
@@ -88,6 +103,8 @@ def cloud_json_save(name, data):
         overwrite=True,
         invalidate=True
     )
+    _JSON_CACHE[name] = (time.time(), data)  # 保存内容を即キャッシュに反映
+
 # ---------------------------------------------------------------------------
 
 CONFIG_PUBLIC_ID = "jichikai/config/app_config"
@@ -977,6 +994,7 @@ def page_admin_news_add():
 
         role, name = _page_editor_actor()
         log_action(role, name, "新着情報追加", title)
+        flash(f"新着情報「{title}」を追加しました", "success")
 
     return _page_editor_redirect()
 
@@ -993,6 +1011,7 @@ def page_admin_news_delete():
 
     role, name = _page_editor_actor()
     log_action(role, name, "新着情報削除", deleted_title)
+    flash(f"新着情報「{deleted_title}」を削除しました", "success")
     return _page_editor_redirect()
 
 # --- 操作履歴（アイコン・リンクは一切設置しない。URLを直接開いてアクセスする） ------
