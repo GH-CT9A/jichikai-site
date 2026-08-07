@@ -140,11 +140,14 @@ section h2 {
 }
 
 /* ─ 新着情報の見出しをフリッカ(明滅)させる ─ */
-@keyframes news-flicker {
-  0%, 49%   { opacity: 1; }
-  50%, 100% { opacity: 0; }
+/* ─ 新着情報の見出しをカラフルに ─ */
+#news h2 {
+  background: linear-gradient(90deg, #ff6b6b, #ffa94d, #ffd43b, #51cf66, #4dabf7, #9775fa);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
 }
-#news h2 { animation: news-flicker 1s steps(1) infinite; }
 
 /* ─ 概要テーブル ─ */
 table { width: 100%; border-collapse: collapse; }
@@ -483,8 +486,25 @@ footer {
 .footer-sep { color: rgba(255,255,255,.4); font-size: .85rem; }
 
 .news-list { list-style: none; padding: 0; max-width: 800px; margin: 0 auto; }
-.news-item { display: flex; align-items: flex-start; gap: 12px; border-bottom: 1px solid #e0e0e0; padding: 12px 0; }
-.news-date { color: #888; font-size: 0.85rem; flex-shrink: 0; padding-top: 2px; }
+.news-item {
+  display: flex; align-items: flex-start; gap: 12px;
+  border-bottom: 1px solid #e0e0e0; padding: 12px 14px;
+  border-left: 5px solid var(--news-accent, #4dabf7);
+  border-radius: 6px;
+  background: #fafafa;
+  margin-bottom: 8px;
+}
+.news-item:nth-child(6n+1) { --news-accent: #ff6b6b; }
+.news-item:nth-child(6n+2) { --news-accent: #ffa94d; }
+.news-item:nth-child(6n+3) { --news-accent: #ffd43b; }
+.news-item:nth-child(6n+4) { --news-accent: #51cf66; }
+.news-item:nth-child(6n+5) { --news-accent: #4dabf7; }
+.news-item:nth-child(6n+6) { --news-accent: #9775fa; }
+.news-date {
+  color: #fff; background: var(--news-accent, #4dabf7);
+  font-size: 0.8rem; font-weight: bold; flex-shrink: 0;
+  padding: 3px 10px; border-radius: 999px;
+}
 .news-content { flex: 1; }
-.news-title { font-weight: bold; }
+.news-title { font-weight: bold; color: #333; }
 .news-body { margin: 6px 0 0 0; color: #555; font-size: 0.9rem; white-space: pre-wrap; }
