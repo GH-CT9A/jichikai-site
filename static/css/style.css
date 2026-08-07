@@ -139,14 +139,12 @@ section h2 {
   border-bottom: 3px solid var(--green-light);
 }
 
-/* ─ 新着情報の見出しをフリッカ(明滅)させる ─ */
-/* ─ 新着情報の見出しをカラフルに ─ */
-#news h2 {
-  background: linear-gradient(90deg, #ff6b6b, #ffa94d, #ffd43b, #51cf66, #4dabf7, #9775fa);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  -webkit-text-fill-color: transparent;
+/* ─ 新着情報の見出し ─ */
+section h2 {
+  text-align: center; font-size: 1.7rem;
+  color: var(--green); margin-bottom: 36px;
+  padding-bottom: 10px;
+  border-bottom: 3px solid var(--green-light);
 }
 
 /* ─ 概要テーブル ─ */
