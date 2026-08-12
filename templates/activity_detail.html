@@ -1,4 +1,9 @@
 {% extends "base.html" %}
+{% block page_title %}{{ content.title }}｜{{ company.name }}{% endblock %}
+{% block page_description %}{{ (content.body[:120] ~ '…') if content.body else (content.title ~ 'に関する活動内容です。') }}{% endblock %}
+{% block og_title %}{{ content.title }}｜{{ company.name }}{% endblock %}
+{% block og_description %}{{ (content.body[:120] ~ '…') if content.body else (content.title ~ 'に関する活動内容です。') }}{% endblock %}
+{% block og_image %}{{ content.images[0].url if content.images else (hero_photos.images[0].url if hero_photos is defined and hero_photos.images else '') }}{% endblock %}
 {% block content %}
 
 <section id="activity-detail" style="max-width: 1000px; margin: 0 auto; padding: 40px 20px; text-align: center;">
