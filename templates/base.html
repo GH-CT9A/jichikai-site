@@ -19,6 +19,15 @@
   <meta property="og:url" content="{{ request.url }}">
   <meta name="twitter:card" content="summary_large_image">
 
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "{{ company.name }}",
+    "url": "{{ request.url_root }}"
+  }
+  </script>
+  
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 
   <!-- Google Analytics (GA4) -->
