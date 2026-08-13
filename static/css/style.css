@@ -518,3 +518,13 @@ footer {
 .news-content { flex: 1; }
 .news-title { font-weight: bold; color: #333; }
 .news-body { margin: 6px 0 0 0; color: #555; font-size: 0.9rem; white-space: pre-wrap; }
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.logo-icon {
+  height: 32px;
+  width: auto;
+}
